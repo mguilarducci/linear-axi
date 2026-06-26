@@ -42,6 +42,12 @@ function teamFilter(team: string | undefined): Record<string, unknown> {
   return team ? { team: { key: { eq: team.toUpperCase() } } } : {};
 }
 
+function scopeFilter(team: string | undefined): Record<string, unknown> {
+  return team
+    ? { team: { key: { eq: team.toUpperCase() } } }
+    : { team: { null: true } };
+}
+
 const LABEL_CREATE_MUTATION = `
 mutation IssueLabelCreate($input: IssueLabelCreateInput!) {
   issueLabelCreate(input: $input) {
@@ -115,11 +121,12 @@ async function createLabel(
   }
 
   // Idempotent: if a label with this name already exists in the same scope,
-  // acknowledge it. Linear scopes labels per-team, so a workspace or other-team
-  // label of the same name must not block a team-scoped create.
+  // acknowledge it. Linear scopes labels per-team, so a label of the same name
+  // in another team (or the workspace) must not block a team-scoped create, and
+  // a team-scoped label must not block a workspace create.
   const existing = await linearRequest<LabelConnection>(
     LABELS_QUERY,
-    { filter: teamFilter(teamFlag) },
+    { filter: scopeFilter(teamFlag) },
     ctx,
   );
   const found = existing.issueLabels.nodes.find(

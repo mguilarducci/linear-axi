@@ -30,6 +30,11 @@ query Initiatives {
   }
 }`;
 
+const INITIATIVES_RESOLVE_QUERY = `
+query InitiativesResolve {
+  initiatives(first: 250) { nodes { id name } }
+}`;
+
 const INITIATIVE_DETAIL_QUERY = `
 query Initiative($id: String!) {
   initiative(id: $id) {
@@ -92,7 +97,7 @@ async function viewInitiative(
 
   const list = await linearRequest<{
     initiatives: { nodes: InitiativeRef[] };
-  }>(INITIATIVES_QUERY, {}, ctx);
+  }>(INITIATIVES_RESOLVE_QUERY, {}, ctx);
   const q = query.toLowerCase();
   const ref = list.initiatives.nodes.find(
     (i) => i.id === query || i.name.toLowerCase() === q,

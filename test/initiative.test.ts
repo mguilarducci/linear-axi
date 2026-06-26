@@ -59,6 +59,26 @@ describe("initiative view", () => {
     expect(out).toMatch(/B{2000}/);
   });
 
+  it("resolves names against a 250-wide query, not the 50-wide list query", async () => {
+    const fetchMock = stubGraphQL(
+      { initiatives: { nodes: [{ id: "i1", name: "Q3 Goals" }] } },
+      {
+        initiative: {
+          name: "Q3 Goals",
+          description: "Big goals",
+          status: "Active",
+          targetDate: "2026-09-30",
+          projects: { nodes: [] },
+        },
+      },
+    );
+    await initiativeCommand(["view", "Q3 Goals"], TEST_CTX);
+    const resolveQuery = JSON.parse(
+      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
+    ).query;
+    expect(resolveQuery).toMatch(/first:\s*250/);
+  });
+
   it("throws NOT_FOUND for an unknown initiative", async () => {
     stubGraphQL({ initiatives: { nodes: [] } });
     await expect(

@@ -62,6 +62,23 @@ describe("label create", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("scopes the idempotency check to the workspace when --team is omitted", async () => {
+    const fetchMock = stubGraphQL(
+      { issueLabels: { nodes: [], pageInfo: { hasNextPage: false } } },
+      {
+        issueLabelCreate: {
+          success: true,
+          issueLabel: { name: "bug", color: "#ff0000" },
+        },
+      },
+    );
+    await labelCommand(["create", "--name", "bug"], TEST_CTX);
+    const existenceVars = JSON.parse(
+      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
+    ).variables;
+    expect(existenceVars.filter).toEqual({ team: { null: true } });
+  });
+
   it("scopes the idempotency check to the team when --team is given", async () => {
     const fetchMock = stubGraphQL(
       { issueLabels: { nodes: [], pageInfo: { hasNextPage: false } } },
