@@ -1,7 +1,7 @@
 import { AxiError } from "axi-sdk-js";
 import type { LinearContext } from "../context.js";
 import { linearRequest } from "../linear.js";
-import { getPositional } from "../args.js";
+import { getPositional, takeBoolFlag } from "../args.js";
 import { truncateBody } from "../body.js";
 import {
   field,
@@ -16,7 +16,7 @@ import { formatCountLine } from "../format.js";
 
 export const DOCUMENT_HELP = `usage: linear-axi document <list|view> [args]
   list                       list documents (title, project, updated)
-  view <ID>                  show a document's content
+  view <ID> [--full]         show a document's content
 `;
 
 const DOCUMENTS_QUERY = `
@@ -80,6 +80,7 @@ async function viewDocument(
   args: string[],
   ctx?: LinearContext,
 ): Promise<string> {
+  const full = takeBoolFlag(args, "--full");
   const id = getPositional(args, 1);
   if (!id) {
     throw new AxiError("document view requires an id", "VALIDATION_ERROR", [
@@ -99,6 +100,8 @@ async function viewDocument(
     field("title"),
     pluck("project", "name", "project"),
     field("url"),
-    custom("content", (it) => truncateBody(it.content)),
+    custom("content", (it) =>
+      full ? (it.content ?? "") : truncateBody(it.content),
+    ),
   ]);
 }

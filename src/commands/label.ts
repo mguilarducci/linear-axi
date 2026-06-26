@@ -30,8 +30,17 @@ const LABELS_QUERY = `
 query Labels($filter: IssueLabelFilter) {
   issueLabels(first: 250, filter: $filter) {
     nodes { id name color team { key } }
+    pageInfo { hasNextPage }
   }
 }`;
+
+type LabelConnection = {
+  issueLabels: { nodes: Label[]; pageInfo: { hasNextPage: boolean } };
+};
+
+function teamFilter(team: string | undefined): Record<string, unknown> {
+  return team ? { team: { key: { eq: team.toUpperCase() } } } : {};
+}
 
 const LABEL_CREATE_MUTATION = `
 mutation IssueLabelCreate($input: IssueLabelCreateInput!) {
@@ -70,10 +79,9 @@ async function listLabels(
   ctx?: LinearContext,
 ): Promise<string> {
   const team = takeFlag(args, "--team");
-  const filter = team ? { team: { key: { eq: team.toUpperCase() } } } : {};
-  const data = await linearRequest<{ issueLabels: { nodes: Label[] } }>(
+  const data = await linearRequest<LabelConnection>(
     LABELS_QUERY,
-    { filter },
+    { filter: teamFilter(team) },
     ctx,
   );
   const labels = data.issueLabels.nodes;
@@ -86,7 +94,10 @@ async function listLabels(
           scopeField,
         ])
       : "labels: 0 found",
-    formatCountLine({ count: labels.length }),
+    formatCountLine({
+      count: labels.length,
+      hasMore: data.issueLabels.pageInfo.hasNextPage,
+    }),
   ]);
 }
 
@@ -103,10 +114,12 @@ async function createLabel(
     ]);
   }
 
-  // Idempotent: if a label with this name already exists, acknowledge it.
-  const existing = await linearRequest<{ issueLabels: { nodes: Label[] } }>(
+  // Idempotent: if a label with this name already exists in the same scope,
+  // acknowledge it. Linear scopes labels per-team, so a workspace or other-team
+  // label of the same name must not block a team-scoped create.
+  const existing = await linearRequest<LabelConnection>(
     LABELS_QUERY,
-    {},
+    { filter: teamFilter(teamFlag) },
     ctx,
   );
   const found = existing.issueLabels.nodes.find(
@@ -127,6 +140,9 @@ async function createLabel(
   const data = await linearRequest<{
     issueLabelCreate: { success: boolean; issueLabel: Record<string, unknown> };
   }>(LABEL_CREATE_MUTATION, { input }, ctx);
+  if (!data.issueLabelCreate.success) {
+    throw new AxiError("Failed to create label", "UNKNOWN");
+  }
 
   return renderDetail("label", data.issueLabelCreate.issueLabel, [
     field("name"),

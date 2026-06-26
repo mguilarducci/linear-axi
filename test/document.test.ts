@@ -41,6 +41,20 @@ describe("document view", () => {
     expect(out).toMatch(/truncated/);
   });
 
+  it("renders the full content without a truncation hint under --full", async () => {
+    stubGraphQL({
+      document: {
+        title: "Spec",
+        content: "A".repeat(2000),
+        url: "https://linear.app/x/document/d1",
+        project: { name: "Launch" },
+      },
+    });
+    const out = await documentCommand(["view", "d1", "--full"], TEST_CTX);
+    expect(out).not.toMatch(/truncated/);
+    expect(out).toMatch(/A{2000}/);
+  });
+
   it("requires an id for view", async () => {
     await expect(documentCommand(["view"], TEST_CTX)).rejects.toMatchObject({
       code: "VALIDATION_ERROR",

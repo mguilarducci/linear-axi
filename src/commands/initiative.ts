@@ -1,7 +1,7 @@
 import { AxiError } from "axi-sdk-js";
 import type { LinearContext } from "../context.js";
 import { linearRequest } from "../linear.js";
-import { getPositional } from "../args.js";
+import { getPositional, takeBoolFlag } from "../args.js";
 import { truncateBody } from "../body.js";
 import {
   field,
@@ -14,7 +14,7 @@ import { formatCountLine } from "../format.js";
 
 export const INITIATIVE_HELP = `usage: linear-axi initiative <list|view> [args]
   list                       list initiatives (name, status)
-  view <NAME|ID>             show an initiative and its projects
+  view <NAME|ID> [--full]    show an initiative and its projects
 `;
 
 interface InitiativeRef {
@@ -80,6 +80,7 @@ async function viewInitiative(
   args: string[],
   ctx?: LinearContext,
 ): Promise<string> {
+  const full = takeBoolFlag(args, "--full");
   const query = getPositional(args, 1);
   if (!query) {
     throw new AxiError(
@@ -118,7 +119,9 @@ async function viewInitiative(
       field("name"),
       field("status"),
       field("targetDate", "target"),
-      custom("description", (it) => truncateBody(it.description)),
+      custom("description", (it) =>
+        full ? (it.description ?? "") : truncateBody(it.description),
+      ),
     ]),
     init.projects.nodes.length
       ? renderList("projects", init.projects.nodes, [

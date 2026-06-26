@@ -22,12 +22,20 @@ describe("user list", () => {
     expect(out).toMatch(/m@x\.com/);
     expect(out).toMatch(/count: 1/);
   });
+
+  it("signals more available when the page is capped", async () => {
+    stubGraphQL({
+      users: { nodes: [MAT], pageInfo: { hasNextPage: true } },
+    });
+    const out = await userCommand(["list"], TEST_CTX);
+    expect(out).toMatch(/count: 1\+ \(more available\)/);
+  });
 });
 
 describe("user view", () => {
   it("resolves a user by email and shows their open issues", async () => {
     stubGraphQL(
-      { users: { nodes: [MAT] } },
+      { users: { nodes: [MAT], pageInfo: { hasNextPage: false } } },
       {
         user: {
           assignedIssues: {
@@ -48,7 +56,7 @@ describe("user view", () => {
   });
 
   it("throws NOT_FOUND for an unknown user", async () => {
-    stubGraphQL({ users: { nodes: [] } });
+    stubGraphQL({ users: { nodes: [], pageInfo: { hasNextPage: false } } });
     await expect(
       userCommand(["view", "ghost"], TEST_CTX),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });

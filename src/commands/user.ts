@@ -56,17 +56,17 @@ export async function userCommand(
   ]);
 }
 
-async function fetchUsers(ctx?: LinearContext): Promise<User[]> {
-  const data = await linearRequest<{ users: { nodes: User[] } }>(
-    USERS_QUERY,
-    {},
-    ctx,
-  );
-  return data.users.nodes;
+async function fetchUsers(
+  ctx?: LinearContext,
+): Promise<{ nodes: User[]; hasMore: boolean }> {
+  const data = await linearRequest<{
+    users: { nodes: User[]; pageInfo: { hasNextPage: boolean } };
+  }>(USERS_QUERY, {}, ctx);
+  return { nodes: data.users.nodes, hasMore: data.users.pageInfo.hasNextPage };
 }
 
 async function listUsers(ctx?: LinearContext): Promise<string> {
-  const users = await fetchUsers(ctx);
+  const { nodes: users, hasMore } = await fetchUsers(ctx);
   return renderOutput([
     users.length
       ? renderList("users", users, [
@@ -75,7 +75,7 @@ async function listUsers(ctx?: LinearContext): Promise<string> {
           boolYesNo("active"),
         ])
       : "users: 0 found",
-    formatCountLine({ count: users.length }),
+    formatCountLine({ count: users.length, hasMore }),
   ]);
 }
 
@@ -87,7 +87,7 @@ async function viewUser(args: string[], ctx?: LinearContext): Promise<string> {
     ]);
   }
 
-  const users = await fetchUsers(ctx);
+  const { nodes: users } = await fetchUsers(ctx);
   const q = query.toLowerCase();
   const user = users.find(
     (u) =>

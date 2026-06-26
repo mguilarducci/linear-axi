@@ -9,12 +9,24 @@ describe("label list", () => {
     stubGraphQL({
       issueLabels: {
         nodes: [{ id: "l1", name: "bug", color: "#ff0000", team: null }],
+        pageInfo: { hasNextPage: false },
       },
     });
     const out = await labelCommand(["list"], TEST_CTX);
     expect(out).toMatch(/bug/);
     expect(out).toMatch(/#ff0000/);
     expect(out).toMatch(/count: 1/);
+  });
+
+  it("scopes the listing to a team when --team is given", async () => {
+    const fetchMock = stubGraphQL({
+      issueLabels: { nodes: [], pageInfo: { hasNextPage: false } },
+    });
+    await labelCommand(["list", "--team", "eng"], TEST_CTX);
+    const vars = JSON.parse(
+      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
+    ).variables;
+    expect(vars.filter).toEqual({ team: { key: { eq: "ENG" } } });
   });
 });
 
@@ -48,6 +60,38 @@ describe("label create", () => {
     const out = await labelCommand(["create", "--name", "bug"], TEST_CTX);
     expect(out).toMatch(/already exists/);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("scopes the idempotency check to the team when --team is given", async () => {
+    const fetchMock = stubGraphQL(
+      { issueLabels: { nodes: [], pageInfo: { hasNextPage: false } } },
+      { teams: { nodes: [{ id: "t1", key: "ENG", name: "Eng" }] } },
+      {
+        issueLabelCreate: {
+          success: true,
+          issueLabel: { name: "bug", color: "#ff0000" },
+        },
+      },
+    );
+    await labelCommand(["create", "--name", "bug", "--team", "eng"], TEST_CTX);
+    const existenceVars = JSON.parse(
+      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
+    ).variables;
+    expect(existenceVars.filter).toEqual({ team: { key: { eq: "ENG" } } });
+    const input = JSON.parse(
+      (fetchMock.mock.calls[2][1] as RequestInit).body as string,
+    ).variables.input;
+    expect(input.teamId).toBe("t1");
+  });
+
+  it("throws when the create mutation reports success: false", async () => {
+    stubGraphQL(
+      { issueLabels: { nodes: [], pageInfo: { hasNextPage: false } } },
+      { issueLabelCreate: { success: false, issueLabel: null } },
+    );
+    await expect(
+      labelCommand(["create", "--name", "urgent"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "UNKNOWN" });
   });
 
   it("requires --name", async () => {
