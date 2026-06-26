@@ -245,10 +245,7 @@ describe("project update", () => {
         },
       },
     );
-    await projectCommand(
-      ["update", "--name", "New", "Launch"],
-      TEST_CTX,
-    );
+    await projectCommand(["update", "--name", "New", "Launch"], TEST_CTX);
     const input = JSON.parse(
       (fetchMock.mock.calls[1][1] as RequestInit).body as string,
     ).variables.input;
