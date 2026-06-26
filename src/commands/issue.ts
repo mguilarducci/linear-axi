@@ -7,7 +7,8 @@ import {
   isOpenStateType,
   CLOSED_STATE_TYPES,
 } from "../state.js";
-import { truncateBody } from "../body.js";
+import { truncateBody, takeBody } from "../body.js";
+import { resolveTeamId } from "./team.js";
 import {
   field,
   pluck,
@@ -72,6 +73,12 @@ export async function issueCommand(
   switch (sub) {
     case "view":
       return viewIssue(args, ctx);
+    case "create":
+      return createIssue(args, ctx);
+    case "update":
+      return updateIssue(args, ctx);
+    case "comment":
+      return commentIssue(args, ctx);
     case "list":
     case undefined:
       return listIssues(args, ctx);
@@ -178,6 +185,168 @@ async function viewIssue(args: string[], ctx?: LinearContext): Promise<string> {
         state: stateBucket,
         id: issue.identifier,
       }),
+    ),
+  ]);
+}
+
+const ISSUE_CREATE_MUTATION = `
+mutation IssueCreate($input: IssueCreateInput!) {
+  issueCreate(input: $input) {
+    success
+    issue { identifier title url state { name } }
+  }
+}`;
+
+const ISSUE_UPDATE_MUTATION = `
+mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
+  issueUpdate(id: $id, input: $input) {
+    success
+    issue {
+      identifier
+      title
+      url
+      state { name }
+      assignee { displayName }
+    }
+  }
+}`;
+
+const VIEWER_ID_QUERY = `query { viewer { id } }`;
+
+const ISSUE_ID_QUERY = `
+query IssueId($id: String!) {
+  issue(id: $id) { id identifier }
+}`;
+
+const COMMENT_CREATE_MUTATION = `
+mutation CommentCreate($input: CommentCreateInput!) {
+  commentCreate(input: $input) {
+    success
+    comment { id url }
+  }
+}`;
+
+const mutatedIssueSchema = [
+  field("identifier"),
+  field("title"),
+  pluck("state", "name", "state"),
+  field("url"),
+];
+
+async function createIssue(
+  args: string[],
+  ctx?: LinearContext,
+): Promise<string> {
+  const title = takeFlag(args, "--title");
+  const description = takeBody(args, {
+    inlineFlags: ["--description"],
+    fileFlags: ["--description-file"],
+  });
+  const teamFlag = takeFlag(args, "--team");
+  if (!title) {
+    throw new AxiError("issue create requires --title", "VALIDATION_ERROR", [
+      'Run `linear-axi issue create --team <KEY> --title "..."`',
+    ]);
+  }
+
+  const team = await resolveTeamId(ctx, teamFlag);
+  const input: Record<string, unknown> = { teamId: team.id, title };
+  if (description !== undefined) input.description = description;
+
+  const data = await linearRequest<{
+    issueCreate: { success: boolean; issue: Record<string, unknown> };
+  }>(ISSUE_CREATE_MUTATION, { input }, ctx);
+  if (!data.issueCreate.success) {
+    throw new AxiError("Failed to create issue", "UNKNOWN");
+  }
+
+  return renderOutput([
+    renderDetail("issue", data.issueCreate.issue, mutatedIssueSchema),
+    renderHelp(["Run `linear-axi issue view <id>` to see the new issue"]),
+  ]);
+}
+
+async function updateIssue(
+  args: string[],
+  ctx?: LinearContext,
+): Promise<string> {
+  const id = getPositional(args, 1);
+  if (!id) {
+    throw new AxiError(
+      "issue update requires an identifier",
+      "VALIDATION_ERROR",
+    );
+  }
+  const title = takeFlag(args, "--title");
+  const description = takeBody(args, {
+    inlineFlags: ["--description"],
+    fileFlags: ["--description-file"],
+  });
+  const assignee = takeFlag(args, "--assignee");
+
+  const input: Record<string, unknown> = {};
+  if (title !== undefined) input.title = title;
+  if (description !== undefined) input.description = description;
+  if (assignee === "me") {
+    const viewer = await linearRequest<{ viewer: { id: string } }>(
+      VIEWER_ID_QUERY,
+      {},
+      ctx,
+    );
+    input.assigneeId = viewer.viewer.id;
+  }
+
+  if (Object.keys(input).length === 0) {
+    throw new AxiError("Nothing to update", "VALIDATION_ERROR", [
+      "Pass at least one of --title, --description, or --assignee me",
+    ]);
+  }
+
+  const data = await linearRequest<{
+    issueUpdate: { success: boolean; issue: Record<string, unknown> };
+  }>(ISSUE_UPDATE_MUTATION, { id, input }, ctx);
+
+  return renderOutput([
+    renderDetail("issue", data.issueUpdate.issue, [
+      ...mutatedIssueSchema,
+      pluck("assignee", "displayName", "assignee"),
+    ]),
+  ]);
+}
+
+async function commentIssue(
+  args: string[],
+  ctx?: LinearContext,
+): Promise<string> {
+  const id = getPositional(args, 1);
+  if (!id) {
+    throw new AxiError(
+      "issue comment requires an identifier",
+      "VALIDATION_ERROR",
+    );
+  }
+  const body = takeBody(args, { required: true });
+
+  const issueData = await linearRequest<{
+    issue: { id: string; identifier: string };
+  }>(ISSUE_ID_QUERY, { id }, ctx);
+
+  const data = await linearRequest<{
+    commentCreate: { success: boolean; comment: { url: string } };
+  }>(
+    COMMENT_CREATE_MUTATION,
+    { input: { issueId: issueData.issue.id, body } },
+    ctx,
+  );
+
+  return renderOutput([
+    renderDetail(
+      "comment",
+      {
+        issue: issueData.issue.identifier,
+        url: data.commentCreate.comment.url,
+      },
+      [field("issue"), field("url")],
     ),
   ]);
 }

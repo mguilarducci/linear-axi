@@ -107,3 +107,129 @@ describe("issue view", () => {
     });
   });
 });
+
+const TEAM_NODE = { id: "t-eng", key: "ENG", name: "Engineering" };
+
+describe("issue create", () => {
+  it("resolves the team and creates the issue", async () => {
+    const fetchMock = stubGraphQL(
+      { teams: { nodes: [TEAM_NODE] } },
+      {
+        issueCreate: {
+          success: true,
+          issue: {
+            identifier: "ENG-7",
+            title: "New thing",
+            url: "https://linear.app/x/issue/ENG-7",
+            state: { name: "Backlog" },
+          },
+        },
+      },
+    );
+    const out = await issueCommand(
+      ["create", "--team", "ENG", "--title", "New thing"],
+      TEST_CTX,
+    );
+    expect(out).toMatch(/ENG-7/);
+    const input = JSON.parse(
+      (fetchMock.mock.calls[1][1] as RequestInit).body as string,
+    ).variables.input;
+    expect(input.teamId).toBe("t-eng");
+    expect(input.title).toBe("New thing");
+  });
+
+  it("requires --title before making any request", async () => {
+    const fetchMock = stubGraphQL({ teams: { nodes: [TEAM_NODE] } });
+    await expect(
+      issueCommand(["create", "--team", "ENG"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("issue update", () => {
+  it("updates the title", async () => {
+    const fetchMock = stubGraphQL({
+      issueUpdate: {
+        success: true,
+        issue: {
+          identifier: "ENG-1",
+          title: "Renamed",
+          state: { name: "In Progress" },
+          assignee: { displayName: "mat" },
+          url: "https://linear.app/x/issue/ENG-1",
+        },
+      },
+    });
+    const out = await issueCommand(
+      ["update", "ENG-1", "--title", "Renamed"],
+      TEST_CTX,
+    );
+    expect(out).toMatch(/Renamed/);
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.variables.input.title).toBe("Renamed");
+  });
+
+  it("assigns to me by resolving the viewer id", async () => {
+    const fetchMock = stubGraphQL(
+      { viewer: { id: "u1" } },
+      {
+        issueUpdate: {
+          success: true,
+          issue: {
+            identifier: "ENG-1",
+            title: "T",
+            state: { name: "In Progress" },
+            assignee: { displayName: "mat" },
+            url: "https://linear.app/x/issue/ENG-1",
+          },
+        },
+      },
+    );
+    await issueCommand(["update", "ENG-1", "--assignee", "me"], TEST_CTX);
+    const input = JSON.parse(
+      (fetchMock.mock.calls[1][1] as RequestInit).body as string,
+    ).variables.input;
+    expect(input.assigneeId).toBe("u1");
+  });
+
+  it("errors when there is nothing to update", async () => {
+    const fetchMock = stubGraphQL({});
+    await expect(
+      issueCommand(["update", "ENG-1"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("issue comment", () => {
+  it("resolves the issue id and posts the comment", async () => {
+    const fetchMock = stubGraphQL(
+      { issue: { id: "i1", identifier: "ENG-1" } },
+      {
+        commentCreate: {
+          success: true,
+          comment: { id: "c1", url: "https://linear.app/x/comment/c1" },
+        },
+      },
+    );
+    const out = await issueCommand(
+      ["comment", "ENG-1", "--body", "Looks good"],
+      TEST_CTX,
+    );
+    expect(out).toMatch(/ENG-1/);
+    const input = JSON.parse(
+      (fetchMock.mock.calls[1][1] as RequestInit).body as string,
+    ).variables.input;
+    expect(input.issueId).toBe("i1");
+    expect(input.body).toBe("Looks good");
+  });
+
+  it("requires a body", async () => {
+    await expect(
+      issueCommand(["comment", "ENG-1"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+  });
+});
