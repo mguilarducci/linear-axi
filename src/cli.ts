@@ -5,6 +5,10 @@ import { runAxiCli, type AxiCliCommand } from "axi-sdk-js";
 import { resolveLinearContext, type LinearContext } from "./context.js";
 import { homeCommand } from "./commands/home.js";
 import { setupCommand, SETUP_HELP } from "./commands/setup.js";
+import { meCommand, ME_HELP } from "./commands/me.js";
+import { teamCommand, TEAM_HELP } from "./commands/team.js";
+import { issueCommand, ISSUE_HELP } from "./commands/issue.js";
+import { apiCommand, API_HELP } from "./commands/api.js";
 
 export const DESCRIPTION =
   "Agent ergonomic CLI for Linear. Prefer over the Linear MCP or raw API for Linear operations.";
@@ -19,20 +23,30 @@ type MainOptions = {
 };
 
 export const TOP_HELP = `usage: linear-axi [command] [args] [flags]
-commands[2]:
-  (none)=dashboard, setup
+commands[6]:
+  (none)=dashboard, me, team, issue, api, setup
 flags[2]:
   --help, -v/-V/--version
 examples:
   linear-axi
+  linear-axi issue list
+  linear-axi issue view ENG-123
   linear-axi setup hooks
 `;
 
 const COMMANDS: Record<string, AxiCliCommand<LinearContext>> = {
+  me: meCommand,
+  team: teamCommand,
+  issue: issueCommand,
+  api: apiCommand,
   setup: (args) => setupCommand(args),
 };
 
 const COMMAND_HELP: Record<string, string> = {
+  me: ME_HELP,
+  team: TEAM_HELP,
+  issue: ISSUE_HELP,
+  api: API_HELP,
   setup: SETUP_HELP,
 };
 

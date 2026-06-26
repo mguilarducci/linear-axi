@@ -72,6 +72,33 @@ export function getAllFlags(args: string[], name: string): string[] {
 }
 
 /**
+ * Collect every occurrence of a repeatable flag, splicing each (and its value)
+ * out of `args` — the `take*` sibling of `getAllFlags`, so positionals can be
+ * resolved safely afterwards.
+ */
+export function takeAllFlags(args: string[], name: string): string[] {
+  const equalsPrefix = `${name}=`;
+  const result: string[] = [];
+  for (let i = 0; i < args.length; ) {
+    const arg = args[i];
+    if (arg === name) {
+      if (i + 1 < args.length) {
+        result.push(args[i + 1]);
+        args.splice(i, 2);
+      } else {
+        args.splice(i, 1);
+      }
+    } else if (arg.startsWith(equalsPrefix)) {
+      result.push(arg.slice(equalsPrefix.length));
+      args.splice(i, 1);
+    } else {
+      i++;
+    }
+  }
+  return result;
+}
+
+/**
  * The n-th (0-based) positional argument — any token not starting with `-`.
  * Intended for use after flags have been removed with the `take*` helpers.
  */
