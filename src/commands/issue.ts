@@ -21,13 +21,18 @@ import {
 import { formatCountLine } from "../format.js";
 import { getSuggestions } from "../suggestions.js";
 
-export const ISSUE_HELP = `usage: linear-axi issue <list|view> [args] [flags]
+export const ISSUE_HELP = `usage: linear-axi issue <subcommand> [args] [flags]
   list                       list issues (default: open)
     --state <open|closed|all>  filter by state bucket (default open)
     --team <KEY>               scope to a team
     --assignee me              only issues assigned to you
     --limit <n>                max issues (default 50)
   view <ID> [--full]         show one issue (e.g. ENG-123)
+  create --title "..."       create an issue (--team <KEY>, --description "...")
+  update <ID> [flags]        edit an issue (--title, --description, --assignee me)
+  comment <ID> --body "..."  add a comment (or --body-file <path>)
+  close <ID>                 move to a completed state (idempotent)
+  reopen <ID>                move back to an open state (idempotent)
 `;
 
 const DEFAULT_LIMIT = 50;
