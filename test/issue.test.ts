@@ -233,3 +233,77 @@ describe("issue comment", () => {
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
   });
 });
+
+const TEAM_STATES = {
+  nodes: [
+    { id: "s-todo", name: "Todo", type: "unstarted" },
+    { id: "s-prog", name: "In Progress", type: "started" },
+    { id: "s-done", name: "Done", type: "completed" },
+  ],
+};
+
+function issueStatePayload(stateName: string, stateType: string) {
+  return {
+    issue: {
+      id: "i1",
+      identifier: "ENG-1",
+      state: { name: stateName, type: stateType },
+      team: { states: TEAM_STATES },
+    },
+  };
+}
+
+const UPDATE_OK = {
+  issueUpdate: {
+    success: true,
+    issue: {
+      identifier: "ENG-1",
+      title: "X",
+      url: "https://linear.app/x/issue/ENG-1",
+      state: { name: "Done" },
+      assignee: null,
+    },
+  },
+};
+
+describe("issue close", () => {
+  it("moves an open issue to a completed-type state", async () => {
+    const fetchMock = stubGraphQL(
+      issueStatePayload("In Progress", "started"),
+      UPDATE_OK,
+    );
+    await issueCommand(["close", "ENG-1"], TEST_CTX);
+    const input = JSON.parse(
+      (fetchMock.mock.calls[1][1] as RequestInit).body as string,
+    ).variables.input;
+    expect(input.stateId).toBe("s-done");
+  });
+
+  it("is a no-op when the issue is already closed", async () => {
+    const fetchMock = stubGraphQL(issueStatePayload("Done", "completed"));
+    const out = await issueCommand(["close", "ENG-1"], TEST_CTX);
+    expect(out).toMatch(/already closed/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("issue reopen", () => {
+  it("moves a closed issue back to an unstarted-type state", async () => {
+    const fetchMock = stubGraphQL(
+      issueStatePayload("Done", "completed"),
+      UPDATE_OK,
+    );
+    await issueCommand(["reopen", "ENG-1"], TEST_CTX);
+    const input = JSON.parse(
+      (fetchMock.mock.calls[1][1] as RequestInit).body as string,
+    ).variables.input;
+    expect(input.stateId).toBe("s-todo");
+  });
+
+  it("is a no-op when the issue is already open", async () => {
+    const fetchMock = stubGraphQL(issueStatePayload("In Progress", "started"));
+    const out = await issueCommand(["reopen", "ENG-1"], TEST_CTX);
+    expect(out).toMatch(/already open/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});

@@ -79,6 +79,10 @@ export async function issueCommand(
       return updateIssue(args, ctx);
     case "comment":
       return commentIssue(args, ctx);
+    case "close":
+      return transitionIssue(args, ctx, "close");
+    case "reopen":
+      return transitionIssue(args, ctx, "reopen");
     case "list":
     case undefined:
       return listIssues(args, ctx);
@@ -349,4 +353,89 @@ async function commentIssue(
       [field("issue"), field("url")],
     ),
   ]);
+}
+
+const ISSUE_STATES_QUERY = `
+query IssueStates($id: String!) {
+  issue(id: $id) {
+    id
+    identifier
+    state { name type }
+    team {
+      states(first: 50) { nodes { id name type } }
+    }
+  }
+}`;
+
+interface WorkflowState {
+  id: string;
+  name: string;
+  type: string;
+}
+
+/**
+ * Close or reopen an issue. Linear has no close action — both move the issue to
+ * a workflow state of the appropriate type within its team. Idempotent: if the
+ * issue is already in the target bucket, this is a no-op with exit code 0.
+ */
+async function transitionIssue(
+  args: string[],
+  ctx: LinearContext | undefined,
+  direction: "close" | "reopen",
+): Promise<string> {
+  const id = getPositional(args, 1);
+  if (!id) {
+    throw new AxiError(
+      `issue ${direction} requires an identifier`,
+      "VALIDATION_ERROR",
+    );
+  }
+
+  const data = await linearRequest<{
+    issue: {
+      identifier: string;
+      state: { name: string; type: string };
+      team: { states: { nodes: WorkflowState[] } };
+    };
+  }>(ISSUE_STATES_QUERY, { id }, ctx);
+  const issue = data.issue;
+  const open = isOpenStateType(issue.state.type);
+
+  // Idempotent no-ops.
+  if (direction === "close" && !open) {
+    return noOp(issue.identifier, issue.state.name, "already closed");
+  }
+  if (direction === "reopen" && open) {
+    return noOp(issue.identifier, issue.state.name, "already open");
+  }
+
+  const states = issue.team.states.nodes;
+  const target =
+    direction === "close"
+      ? states.find((s) => s.type === "completed")
+      : (states.find((s) => s.type === "unstarted") ??
+        states.find((s) => s.type === "backlog"));
+
+  if (!target) {
+    throw new AxiError(
+      `This team has no ${direction === "close" ? "completed" : "unstarted"} workflow state`,
+      "NOT_FOUND",
+    );
+  }
+
+  const result = await linearRequest<{
+    issueUpdate: { success: boolean; issue: Record<string, unknown> };
+  }>(ISSUE_UPDATE_MUTATION, { id, input: { stateId: target.id } }, ctx);
+
+  return renderOutput([
+    renderDetail("issue", result.issueUpdate.issue, mutatedIssueSchema),
+  ]);
+}
+
+function noOp(identifier: string, stateName: string, message: string): string {
+  return renderDetail(
+    "issue",
+    { identifier, state: stateName, message: `${message} (no-op)` },
+    [field("identifier"), field("state"), field("message")],
+  );
 }
