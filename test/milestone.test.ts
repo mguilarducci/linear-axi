@@ -23,6 +23,7 @@ describe("milestone list", () => {
       ["list", "--project", "Launch"],
       TEST_CTX,
     );
+    expect(out).toMatch(/project: Launch/);
     expect(out).toMatch(/Beta/);
     expect(out).toMatch(/count: 1/);
   });

@@ -64,6 +64,33 @@ describe("resolveProject", () => {
       code: "NOT_FOUND",
     });
   });
+
+  it("errors on an ambiguous name instead of mutating the wrong project", async () => {
+    stubGraphQL({
+      projects: {
+        nodes: [
+          { id: "p1", name: "Launch" },
+          { id: "p2", name: "Launch" },
+        ],
+      },
+    });
+    await expect(resolveProject(TEST_CTX, "launch")).rejects.toMatchObject({
+      code: "VALIDATION_ERROR",
+    });
+  });
+
+  it("resolves an exact id even when a same-named project exists", async () => {
+    stubGraphQL({
+      projects: {
+        nodes: [
+          { id: "p1", name: "Launch" },
+          { id: "p2", name: "Launch" },
+        ],
+      },
+    });
+    const p = await resolveProject(TEST_CTX, "p2");
+    expect(p.id).toBe("p2");
+  });
 });
 
 describe("project view", () => {

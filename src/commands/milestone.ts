@@ -46,6 +46,7 @@ export async function milestoneCommand(
   const ref = await resolveProject(ctx, projectQuery);
   const data = await linearRequest<{
     project: {
+      name: string;
       projectMilestones: {
         nodes: Array<{ name: string; targetDate: string | null }>;
       };
@@ -54,6 +55,7 @@ export async function milestoneCommand(
   const milestones = data.project.projectMilestones.nodes;
 
   return renderOutput([
+    `project: ${data.project.name}`,
     milestones.length
       ? renderList("milestones", milestones, [
           field("name"),

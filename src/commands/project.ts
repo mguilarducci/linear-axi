@@ -78,15 +78,28 @@ export async function resolveProject(
     {},
     ctx,
   );
-  const match = data.projects.nodes.find(
-    (p) => p.id === query || p.name.toLowerCase() === query.toLowerCase(),
+  const byId = data.projects.nodes.find((p) => p.id === query);
+  if (byId) return byId;
+
+  const byName = data.projects.nodes.filter(
+    (p) => p.name.toLowerCase() === query.toLowerCase(),
   );
-  if (!match) {
+  if (byName.length === 0) {
     throw new AxiError(`No project matching "${query}"`, "NOT_FOUND", [
       "Run `linear-axi project list` to see available projects",
     ]);
   }
-  return match;
+  if (byName.length > 1) {
+    throw new AxiError(
+      `Multiple projects named "${query}"`,
+      "VALIDATION_ERROR",
+      [
+        "Re-run with one of these ids to disambiguate:",
+        ...byName.map((p) => `  ${p.id}`),
+      ],
+    );
+  }
+  return byName[0];
 }
 
 export async function projectCommand(
