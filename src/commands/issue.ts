@@ -74,7 +74,8 @@ export async function issueCommand(
   args: string[],
   ctx?: LinearContext,
 ): Promise<string> {
-  const sub = getPositional(args, 0);
+  const first = args[0];
+  const sub = first === undefined || first.startsWith("-") ? undefined : first;
   switch (sub) {
     case "view":
       return viewIssue(args, ctx);

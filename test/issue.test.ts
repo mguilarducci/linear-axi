@@ -384,6 +384,36 @@ describe("issue close", () => {
   });
 });
 
+describe("issue dispatch", () => {
+  it("defaults to list when a value flag leads without a subcommand", async () => {
+    const fetchMock = stubGraphQL(issuesPayload([]));
+    await issueCommand(["--state", "closed"], TEST_CTX);
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.variables.filter).toEqual({
+      state: { type: { in: ["completed", "canceled"] } },
+    });
+  });
+
+  it("defaults to list when --limit leads without a subcommand", async () => {
+    const fetchMock = stubGraphQL(issuesPayload([]));
+    await issueCommand(["--limit", "5"], TEST_CTX);
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.variables.first).toBe(5);
+  });
+
+  it("rejects an unknown subcommand", async () => {
+    const fetchMock = stubGraphQL(issuesPayload([]));
+    await expect(issueCommand(["bogus"], TEST_CTX)).rejects.toMatchObject({
+      code: "VALIDATION_ERROR",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("issue reopen", () => {
   it("moves a closed issue back to an unstarted-type state", async () => {
     const fetchMock = stubGraphQL(
