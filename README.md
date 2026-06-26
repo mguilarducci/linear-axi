@@ -11,7 +11,7 @@ Linear CLI for agents — designed with [AXI](https://github.com/kunchenguid/axi
 Talks to Linear with token-efficient [TOON](https://toonformat.dev/) output, contextual next-step suggestions, and structured error handling.
 Built for autonomous agents that interact with Linear via shell execution.
 
-> **Status: early scaffold.** This repository currently ships the AXI plumbing — a no-arg dashboard, `setup hooks`, the SKILL.md generation pipeline, and CI — but no Linear commands yet. It is the foundation the issue/project/cycle/team commands will be built on.
+> **Status: in progress.** This repository ships the AXI plumbing — the SKILL.md generation pipeline and CI — alongside a live no-arg dashboard and the core Linear commands: `issue` (list/view/create/update/comment/close/reopen), `me`, `team`, and a raw `api` escape hatch, plus `setup hooks`. Project and cycle commands are not implemented yet.
 
 ## Quick Start
 
@@ -53,9 +53,21 @@ This installs a `SessionStart` hook for **Claude Code**, **Codex**, and **OpenCo
 ## Usage
 
 ```bash
-linear-axi              # dashboard — live state, no args needed
-linear-axi setup hooks  # install optional agent session hooks
+linear-axi                          # dashboard — your assigned issues and teams, no args needed
+linear-axi me                       # show the authenticated user and their open issues
+linear-axi issue list               # list open issues (--state, --team, --assignee me, --limit)
+linear-axi issue view ENG-123       # show one issue (add --full for the complete body)
+linear-axi issue create --title "..."  # file an issue (--team, --description)
+linear-axi issue update ENG-123 --title "..."  # edit title, description, or assignee
+linear-axi issue comment ENG-123 --body "..."  # comment (or --body-file <path>)
+linear-axi issue close ENG-123      # move to a completed state (idempotent)
+linear-axi issue reopen ENG-123     # move back to an open state (idempotent)
+linear-axi team list                # list teams (team view <KEY> for states and labels)
+linear-axi api '{ viewer { id } }'  # raw GraphQL escape hatch (--var key=value)
+linear-axi setup hooks              # install optional agent session hooks
 ```
+
+Run `linear-axi <command> --help` for full per-command usage.
 
 ### Configuration
 
