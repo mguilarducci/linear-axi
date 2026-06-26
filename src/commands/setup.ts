@@ -15,7 +15,18 @@ export async function setupCommand(args: string[]): Promise<string> {
     ]);
   }
 
-  installSessionStartHooks();
+  const errors: string[] = [];
+  installSessionStartHooks({ onError: (message) => errors.push(message) });
+
+  if (errors.length > 0) {
+    const detail = errors.map((message) => `    - ${message}`).join("\n");
+    return renderOutput([
+      `hooks:\n  status: incomplete\n  errors[${errors.length}]:\n${detail}`,
+      renderHelp([
+        "Resolve the errors above (usually a file permission issue), then re-run `linear-axi setup hooks`",
+      ]),
+    ]);
+  }
 
   return renderOutput([
     "hooks:\n  status: installed\n  integrations: Claude Code, Codex, OpenCode",
