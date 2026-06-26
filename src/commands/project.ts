@@ -170,6 +170,7 @@ async function viewProject(
       state: string;
       health: string | null;
       progress: number;
+      startDate: string | null;
       targetDate: string | null;
       url: string;
       lead: { displayName: string } | null;
@@ -186,6 +187,7 @@ async function viewProject(
       field("state"),
       mapEnum("health", HEALTH_MAP, "unknown"),
       progressField,
+      field("startDate", "start"),
       field("targetDate", "target"),
       pluck("lead", "displayName", "lead"),
       field("url"),
