@@ -1,7 +1,7 @@
 import { AxiError } from "axi-sdk-js";
 import type { LinearContext } from "../context.js";
 import { linearRequest } from "../linear.js";
-import { getPositional, takeFlag } from "../args.js";
+import { getPositional, takeFlag, takeBoolFlag } from "../args.js";
 import { truncateBody, takeBody } from "../body.js";
 import { resolveTeamId } from "./team.js";
 import {
@@ -19,7 +19,7 @@ import { formatCountLine } from "../format.js";
 
 export const PROJECT_HELP = `usage: linear-axi project <subcommand> [args] [flags]
   list [--limit <n>]         list projects (name, state, health, progress)
-  view <NAME|ID>             show a project with its milestones
+  view <NAME|ID> [--full]    show a project with its milestones
   create --name "..."        create a project (--team <KEY>, --description "...")
   update <NAME|ID> [flags]   edit a project (--name, --state, --description, --target-date)
 `;
@@ -153,6 +153,7 @@ async function viewProject(
   args: string[],
   ctx?: LinearContext,
 ): Promise<string> {
+  const full = takeBoolFlag(args, "--full");
   const query = getPositional(args, 1);
   if (!query) {
     throw new AxiError(
@@ -188,7 +189,9 @@ async function viewProject(
       field("targetDate", "target"),
       pluck("lead", "displayName", "lead"),
       field("url"),
-      custom("description", (it) => truncateBody(it.description)),
+      custom("description", (it) =>
+        full ? (it.description ?? "") : truncateBody(it.description),
+      ),
     ]),
     p.projectMilestones.nodes.length
       ? renderList("milestones", p.projectMilestones.nodes, [

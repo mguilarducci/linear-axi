@@ -94,6 +94,29 @@ describe("project view", () => {
     expect(out).toMatch(/truncated/);
   });
 
+  it("renders the full description when --full is passed", async () => {
+    stubGraphQL(
+      { projects: { nodes: [{ id: "p1", name: "Launch" }] } },
+      {
+        project: {
+          name: "Launch",
+          description: "A".repeat(1000),
+          state: "started",
+          health: "onTrack",
+          progress: 0.5,
+          startDate: null,
+          targetDate: "2026-07-01",
+          lead: { displayName: "mat" },
+          url: "https://linear.app/x/project/launch",
+          projectMilestones: { nodes: [] },
+        },
+      },
+    );
+    const out = await projectCommand(["view", "Launch", "--full"], TEST_CTX);
+    expect(out).toMatch(/A{1000}/);
+    expect(out).not.toMatch(/truncated/);
+  });
+
   it("errors when view is missing a query", async () => {
     await expect(projectCommand(["view"], TEST_CTX)).rejects.toMatchObject({
       code: "VALIDATION_ERROR",
