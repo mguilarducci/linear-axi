@@ -97,9 +97,11 @@ export async function teamCommand(
     case undefined:
       return listTeams(ctx);
     default:
-      throw new AxiError(`Unknown team subcommand: ${sub}`, "VALIDATION_ERROR", [
-        "Run `linear-axi team --help` for usage",
-      ]);
+      throw new AxiError(
+        `Unknown team subcommand: ${sub}`,
+        "VALIDATION_ERROR",
+        ["Run `linear-axi team --help` for usage"],
+      );
   }
 }
 
