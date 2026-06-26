@@ -24,6 +24,19 @@ describe("api", () => {
     expect(body.variables).toEqual({ first: 10, q: "abc" });
   });
 
+  it("resolves the query even when --var precedes it", async () => {
+    const fetchMock = stubGraphQL({ viewer: { id: "u1" } });
+    await apiCommand(
+      ["--var", "n=5", "query($n:Int){ viewer { id } }"],
+      TEST_CTX,
+    );
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.query).toBe("query($n:Int){ viewer { id } }");
+    expect(body.variables).toEqual({ n: 5 });
+  });
+
   it("requires a query string", async () => {
     await expect(apiCommand([], TEST_CTX)).rejects.toMatchObject({
       code: "VALIDATION_ERROR",

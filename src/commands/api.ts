@@ -2,7 +2,7 @@ import { encode } from "@toon-format/toon";
 import { AxiError } from "axi-sdk-js";
 import type { LinearContext } from "../context.js";
 import { linearRequest } from "../linear.js";
-import { getPositional, getAllFlags } from "../args.js";
+import { getPositional, takeAllFlags } from "../args.js";
 
 export const API_HELP = `usage: linear-axi api '<graphql>' [--var key=value ...]
 Run a raw GraphQL operation against the Linear API. The escape hatch for
@@ -30,17 +30,8 @@ export async function apiCommand(
   args: string[],
   ctx?: LinearContext,
 ): Promise<string> {
-  const query = getPositional(args, 0);
-  if (!query) {
-    throw new AxiError(
-      "api requires a GraphQL query string",
-      "VALIDATION_ERROR",
-      ["Run `linear-axi api '{ viewer { id name } }'`"],
-    );
-  }
-
   const variables: Record<string, unknown> = {};
-  for (const pair of getAllFlags(args, "--var")) {
+  for (const pair of takeAllFlags(args, "--var")) {
     const eq = pair.indexOf("=");
     if (eq === -1) {
       throw new AxiError(
@@ -49,6 +40,15 @@ export async function apiCommand(
       );
     }
     variables[pair.slice(0, eq)] = parseVarValue(pair.slice(eq + 1));
+  }
+
+  const query = getPositional(args, 0);
+  if (!query) {
+    throw new AxiError(
+      "api requires a GraphQL query string",
+      "VALIDATION_ERROR",
+      ["Run `linear-axi api '{ viewer { id name } }'`"],
+    );
   }
 
   const data = await linearRequest<unknown>(query, variables, ctx);

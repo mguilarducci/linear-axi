@@ -49,6 +49,39 @@ describe("issue list", () => {
     expect(body.variables.filter.state).toBeUndefined();
   });
 
+  it("rejects an unknown --state bucket instead of silently returning all", async () => {
+    const fetchMock = stubGraphQL(issuesPayload([]));
+    await expect(
+      issueCommand(["list", "--state", "opened"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-numeric --limit instead of sending first: null", async () => {
+    const fetchMock = stubGraphQL(issuesPayload([]));
+    await expect(
+      issueCommand(["list", "--limit", "abc"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-positive --limit", async () => {
+    const fetchMock = stubGraphQL(issuesPayload([]));
+    await expect(
+      issueCommand(["list", "--limit", "0"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("passes a valid --limit through", async () => {
+    const fetchMock = stubGraphQL(issuesPayload([]));
+    await issueCommand(["list", "--limit", "5"], TEST_CTX);
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.variables.first).toBe(5);
+  });
+
   it("scopes to a team key (upper-cased) via --team", async () => {
     const fetchMock = stubGraphQL(issuesPayload([]));
     await issueCommand(["list", "--team", "eng"], TEST_CTX);
@@ -195,6 +228,34 @@ describe("issue update", () => {
     expect(input.assigneeId).toBe("u1");
   });
 
+  it("resolves the id even when a value flag precedes it", async () => {
+    const fetchMock = stubGraphQL({
+      issueUpdate: {
+        success: true,
+        issue: {
+          identifier: "ENG-1",
+          title: "Renamed",
+          state: { name: "In Progress" },
+          assignee: { displayName: "mat" },
+          url: "https://linear.app/x/issue/ENG-1",
+        },
+      },
+    });
+    await issueCommand(["update", "--title", "Renamed", "ENG-1"], TEST_CTX);
+    const body = JSON.parse(
+      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(body.variables.id).toBe("ENG-1");
+    expect(body.variables.input.title).toBe("Renamed");
+  });
+
+  it("throws when the update mutation reports failure", async () => {
+    stubGraphQL({ issueUpdate: { success: false, issue: null } });
+    await expect(
+      issueCommand(["update", "ENG-1", "--title", "Renamed"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "UNKNOWN" });
+  });
+
   it("errors when there is nothing to update", async () => {
     const fetchMock = stubGraphQL({});
     await expect(
@@ -225,6 +286,33 @@ describe("issue comment", () => {
     ).variables.input;
     expect(input.issueId).toBe("i1");
     expect(input.body).toBe("Looks good");
+  });
+
+  it("resolves the id even when --body precedes it", async () => {
+    const fetchMock = stubGraphQL(
+      { issue: { id: "i1", identifier: "ENG-1" } },
+      {
+        commentCreate: {
+          success: true,
+          comment: { id: "c1", url: "https://linear.app/x/comment/c1" },
+        },
+      },
+    );
+    await issueCommand(["comment", "--body", "Looks good", "ENG-1"], TEST_CTX);
+    const idBody = JSON.parse(
+      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
+    );
+    expect(idBody.variables.id).toBe("ENG-1");
+  });
+
+  it("throws when the comment mutation reports failure", async () => {
+    stubGraphQL(
+      { issue: { id: "i1", identifier: "ENG-1" } },
+      { commentCreate: { success: false, comment: null } },
+    );
+    await expect(
+      issueCommand(["comment", "ENG-1", "--body", "x"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "UNKNOWN" });
   });
 
   it("requires a body", async () => {
@@ -284,6 +372,15 @@ describe("issue close", () => {
     const out = await issueCommand(["close", "ENG-1"], TEST_CTX);
     expect(out).toMatch(/already closed/);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("throws when the transition mutation reports failure", async () => {
+    stubGraphQL(issueStatePayload("In Progress", "started"), {
+      issueUpdate: { success: false, issue: null },
+    });
+    await expect(
+      issueCommand(["close", "ENG-1"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "UNKNOWN" });
   });
 });
 

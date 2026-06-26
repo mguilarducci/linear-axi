@@ -106,6 +106,12 @@ function buildIssueFilter(args: string[]): Record<string, unknown> {
   const team = takeFlag(args, "--team");
   const assignee = takeFlag(args, "--assignee");
 
+  if (state !== "open" && state !== "closed" && state !== "all") {
+    throw new AxiError(`Invalid --state "${state}"`, "VALIDATION_ERROR", [
+      "Use one of: open, closed, all",
+    ]);
+  }
+
   const filter: Record<string, unknown> = {};
   if (state === "open") Object.assign(filter, openIssueFilter());
   else if (state === "closed")
@@ -123,7 +129,13 @@ async function listIssues(
   args: string[],
   ctx?: LinearContext,
 ): Promise<string> {
-  const limit = Number(takeFlag(args, "--limit") ?? DEFAULT_LIMIT);
+  const limitRaw = takeFlag(args, "--limit");
+  const limit = limitRaw === undefined ? DEFAULT_LIMIT : Number(limitRaw);
+  if (!Number.isInteger(limit) || limit <= 0) {
+    throw new AxiError(`Invalid --limit "${limitRaw}"`, "VALIDATION_ERROR", [
+      "--limit must be a positive integer",
+    ]);
+  }
   const filter = buildIssueFilter(args);
 
   const data = await linearRequest<{
@@ -279,6 +291,12 @@ async function updateIssue(
   args: string[],
   ctx?: LinearContext,
 ): Promise<string> {
+  const title = takeFlag(args, "--title");
+  const description = takeBody(args, {
+    inlineFlags: ["--description"],
+    fileFlags: ["--description-file"],
+  });
+  const assignee = takeFlag(args, "--assignee");
   const id = getPositional(args, 1);
   if (!id) {
     throw new AxiError(
@@ -286,12 +304,6 @@ async function updateIssue(
       "VALIDATION_ERROR",
     );
   }
-  const title = takeFlag(args, "--title");
-  const description = takeBody(args, {
-    inlineFlags: ["--description"],
-    fileFlags: ["--description-file"],
-  });
-  const assignee = takeFlag(args, "--assignee");
 
   const input: Record<string, unknown> = {};
   if (title !== undefined) input.title = title;
@@ -314,6 +326,9 @@ async function updateIssue(
   const data = await linearRequest<{
     issueUpdate: { success: boolean; issue: Record<string, unknown> };
   }>(ISSUE_UPDATE_MUTATION, { id, input }, ctx);
+  if (!data.issueUpdate.success) {
+    throw new AxiError("Failed to update issue", "UNKNOWN");
+  }
 
   return renderOutput([
     renderDetail("issue", data.issueUpdate.issue, [
@@ -327,6 +342,7 @@ async function commentIssue(
   args: string[],
   ctx?: LinearContext,
 ): Promise<string> {
+  const body = takeBody(args, { required: true });
   const id = getPositional(args, 1);
   if (!id) {
     throw new AxiError(
@@ -334,7 +350,6 @@ async function commentIssue(
       "VALIDATION_ERROR",
     );
   }
-  const body = takeBody(args, { required: true });
 
   const issueData = await linearRequest<{
     issue: { id: string; identifier: string };
@@ -347,6 +362,9 @@ async function commentIssue(
     { input: { issueId: issueData.issue.id, body } },
     ctx,
   );
+  if (!data.commentCreate.success) {
+    throw new AxiError("Failed to add comment", "UNKNOWN");
+  }
 
   return renderOutput([
     renderDetail(
@@ -431,6 +449,9 @@ async function transitionIssue(
   const result = await linearRequest<{
     issueUpdate: { success: boolean; issue: Record<string, unknown> };
   }>(ISSUE_UPDATE_MUTATION, { id, input: { stateId: target.id } }, ctx);
+  if (!result.issueUpdate.success) {
+    throw new AxiError(`Failed to ${direction} issue`, "UNKNOWN");
+  }
 
   return renderOutput([
     renderDetail("issue", result.issueUpdate.issue, mutatedIssueSchema),
