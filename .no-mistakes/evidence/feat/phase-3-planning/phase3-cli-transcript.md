@@ -7,6 +7,7 @@ code paths — only the network boundary is stubbed. Output is the exact termina
 surface an agent/user sees.
 
 ## Command discovery (top-level help)
+
 ```
 usage: linear-axi [command] [args] [flags]
 commands[9]:
@@ -22,6 +23,7 @@ examples:
 ```
 
 ## Per-command help
+
 ```
 $ linear-axi project --help
 usage: linear-axi project <subcommand> [args] [flags]
@@ -42,6 +44,7 @@ List the milestones of a project (name, target date).
 ```
 
 ## Happy-path transcripts
+
 ```
 $ linear-axi project list
 projects[2]{name,state,health,progress}:
@@ -105,6 +108,7 @@ count: 2
 ```
 
 ## Guard / error / empty-state surfaces
+
 ```
 $ linear-axi project view Launch
 error: "Multiple projects named \"Launch\""
