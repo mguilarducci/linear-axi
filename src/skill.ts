@@ -88,6 +88,5 @@ Run \`npx -y linear-axi --help\` for global flags, or \`npx -y linear-axi <comma
 ## Tips
 
 - Output is TOON-encoded and token-efficient; pipe through grep/head only when a list is very long.
-- Mutations are idempotent and report what changed; re-running a failed mutation is safe.
 `;
 }
