@@ -11,7 +11,7 @@ Linear CLI for agents — designed with [AXI](https://github.com/kunchenguid/axi
 Talks to Linear with token-efficient [TOON](https://toonformat.dev/) output, contextual next-step suggestions, and structured error handling.
 Built for autonomous agents that interact with Linear via shell execution.
 
-> **Status: in progress.** This repository ships the AXI plumbing — the SKILL.md generation pipeline and CI — alongside a live no-arg dashboard and the core Linear commands: `issue` (list/view/create/update/comment/close/reopen), `me`, `team`, and a raw `api` escape hatch, plus `setup hooks`. Project and cycle commands are not implemented yet.
+> **Status: in progress.** This repository ships the AXI plumbing — the SKILL.md generation pipeline and CI — alongside a live no-arg dashboard and the core Linear commands: `issue` (list/view/create/update/comment/close/reopen), `me`, `team`, the planning surface — `project` (list/view/create/update), `cycle` (list/view), and `milestone` (list) — and a raw `api` escape hatch, plus `setup hooks`.
 
 ## Quick Start
 
@@ -63,6 +63,13 @@ linear-axi issue comment ENG-123 --body "..."  # comment (or --body-file <path>)
 linear-axi issue close ENG-123      # move to a completed state (idempotent)
 linear-axi issue reopen ENG-123     # move back to an open state (idempotent)
 linear-axi team list                # list teams (team view <KEY> for states and labels)
+linear-axi project list             # list projects (name, state, health, progress)
+linear-axi project view "Roadmap"   # show one project and its milestones (add --full)
+linear-axi project create --name "..."  # create a project (--team, --description)
+linear-axi project update "Roadmap" --state completed  # edit name, state, description, or --target-date
+linear-axi cycle list --team ENG    # list a team's cycles (--team, else LINEAR_TEAM)
+linear-axi cycle view --team ENG    # show the team's active cycle
+linear-axi milestone list --project "Roadmap"  # list a project's milestones
 linear-axi api '{ viewer { id } }'  # raw GraphQL escape hatch (--var key=value)
 linear-axi setup hooks              # install optional agent session hooks
 ```
