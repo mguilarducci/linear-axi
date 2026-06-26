@@ -263,6 +263,17 @@ describe("issue update", () => {
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("rejects an assignee other than me instead of silently dropping it", async () => {
+    const fetchMock = stubGraphQL({});
+    await expect(
+      issueCommand(["update", "ENG-1", "--assignee", "bob@x.com"], TEST_CTX),
+    ).rejects.toMatchObject({
+      code: "VALIDATION_ERROR",
+      message: expect.stringContaining("--assignee"),
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("issue comment", () => {

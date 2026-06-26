@@ -305,6 +305,11 @@ async function updateIssue(
       "VALIDATION_ERROR",
     );
   }
+  if (assignee !== undefined && assignee !== "me") {
+    throw new AxiError(`Invalid --assignee "${assignee}"`, "VALIDATION_ERROR", [
+      "Only `--assignee me` is supported when updating an issue",
+    ]);
+  }
 
   const input: Record<string, unknown> = {};
   if (title !== undefined) input.title = title;
