@@ -1,0 +1,74 @@
+linear-axi — Phase 1 foundation behaviour demo
+(each block drives a foundation module the future commands are built on)
+
+──────── context.ts — resolveLinearContext / requireApiKey ────────
+resolveLinearContext() => {"apiKeyPresent":true,"apiKey":"lin_api_demoKey_abc123","teamKey":"ENG"}
+requireApiKey(ctx) => lin_api_demoKey_abc123
+requireApiKey(no key) throws AxiError code=AUTH_REQUIRED suggestions=["Set LINEAR_API_KEY to a Linear personal API key, then retry","Create one at Linear → Settings → Security & access → Personal API keys"]
+
+──────── linear.ts — real request, Authorization header captured over the wire ────────
+linearRequest returned data => {"viewer":{"id":"u_123","name":"Demo User"}}
+Authorization header the SERVER actually received => "lin_api_demoKey_abc123"
+  → equals the raw key, NO "Bearer " prefix: true
+  → starts with "Bearer "? false
+
+──────── linear.ts — GraphQL auth error maps to a structured AxiError ────────
+linearRequest(auth fail) throws code=AUTH_ERROR message="Your API key is invalid."
+  suggestions => ["Check that LINEAR_API_KEY is set to a valid Linear personal API key","Create a key at Linear → Settings → Security & access → Personal API keys"]
+
+──────── linear.ts — missing key fails fast WITHOUT any network call ────────
+linearRequest(no key) throws code=AUTH_REQUIRED (server header unchanged: true)
+
+──────── errors.ts — GraphQL error category → AxiError code ────────
+rate limited   => code=RATE_LIMITED  message="slow down"
+not found      => code=NOT_FOUND  message="Could not find issue ENG-999"
+validation     => code=VALIDATION_ERROR  message="bad"
+bare HTTP 503  => code=SERVER_ERROR  message="Linear API server error (HTTP 503)"
+
+──────── format.ts — formatCountLine precedence (exact / soft / plain) ────────
+exact total  => count: 12 of 47 total
+more pages   => count: 50+ (more available)
+plain        => count: 3
+
+──────── state.ts — open/closed workflow-state semantics ────────
+isOpenStateType(backlog    ) => true
+isOpenStateType(started    ) => true
+isOpenStateType(completed  ) => false
+isOpenStateType(canceled   ) => false
+isOpenStateType(triage     ) => true
+isOpenStateType(future_type) => true
+openIssueFilter() => {"state":{"type":{"nin":["completed","canceled"]}}}
+
+──────── body.ts — cleanBody / truncateBody / takeBody ────────
+cleanBody image embed  => "see [image: diagram] here"
+cleanBody long bare URL => "link [long URL removed]"
+truncateBody(900 chars) ends with => ..."... (truncated, 900 chars total — use --full to see the complete body)"
+takeBody(--body) => "Inline body text"  (remaining args: ["--title","hi"])
+takeBody(both sources) throws code=VALIDATION_ERROR "Use only one body source: --body or --body-file, not both"
+
+──────── fields.ts — parseFields opt-in validation ────────
+parseFields("estimate,priority") => extraGraphql=["estimate","priority"]
+parseFields("estimate,bogus") throws code=VALIDATION_ERROR "Unknown field(s): bogus. Available: estimate, priority"
+
+──────── suggestions.ts — contextual next-step hints ────────
+issue list (empty) =>
+  Run `linear-axi issue create --team <KEY> --title "..."` to file the first issue
+issue view (open, ENG-12) =>
+  Run `linear-axi issue comment ENG-12 --body "..."` to comment
+  Run `linear-axi issue close ENG-12` to close it
+  Run `linear-axi issue update ENG-12 --assignee me` to assign it to yourself
+issue view (closed, ENG-7) =>
+  Run `linear-axi issue reopen ENG-7` to reopen it
+team list =>
+  Run `linear-axi team view <KEY>` to see its states and labels
+unmatched context => []
+
+──────── args.ts — flag/positional parsing (take* mutate, leaving positionals) ────────
+argv before        => ["issue","ENG-42","--assignee=me","--label","bug","--label","p1","--json"]
+takeFlag --assignee => me
+getAllFlags --label => ["bug","p1"]
+takeBoolFlag --json => true
+argv after          => ["issue","ENG-42"]
+getPositional(0/1)  => issue / ENG-42
+
+✓ all foundation modules exercised end-to-end

@@ -1,0 +1,33 @@
+$ linear-axi --version
+0.1.0
+
+$ linear-axi --help
+usage: linear-axi [command] [args] [flags]
+commands[2]:
+  (none)=dashboard, setup
+flags[2]:
+  --help, -v/-V/--version
+examples:
+  linear-axi
+  linear-axi setup hooks
+
+$ linear-axi            # bare dashboard, LINEAR_API_KEY unset
+bin: ~/.no-mistakes/worktrees/22260063c496/01KW2K6VHKWQYV507XHRK1CH83/bin/linear-axi.ts
+description: Agent ergonomic CLI for Linear. Prefer over the Linear MCP or raw API for Linear operations.
+status: scaffold
+note: Linear commands are not implemented yet
+auth: LINEAR_API_KEY not set
+help[3]:
+  Set LINEAR_API_KEY to connect linear-axi to your workspace
+  Run `linear-axi setup hooks` to install agent session hooks
+  Run `linear-axi --help` to see available commands
+
+$ LINEAR_API_KEY=lin_api_demo123 LINEAR_TEAM=ENG linear-axi   # key + team present
+bin: ~/.no-mistakes/worktrees/22260063c496/01KW2K6VHKWQYV507XHRK1CH83/bin/linear-axi.ts
+description: Agent ergonomic CLI for Linear. Prefer over the Linear MCP or raw API for Linear operations.
+status: scaffold
+note: Linear commands are not implemented yet
+auth: LINEAR_API_KEY detected
+help[2]:
+  Run `linear-axi setup hooks` to install agent session hooks
+  Run `linear-axi --help` to see available commands
