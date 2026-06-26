@@ -65,17 +65,17 @@ If linear-axi output shows a follow-up command starting with \`linear-axi\`, run
 
 linear-axi authenticates with a \`LINEAR_API_KEY\` environment variable. If a command fails with an authentication error, ask the user to provide a Linear API key.
 
-> Status: this CLI is an early scaffold. Today it ships a no-arg dashboard and \`setup hooks\`; Linear commands (issues, projects, cycles, teams) are not implemented yet.
-
 ## When to use
 
-Use linear-axi whenever a task touches Linear: triaging, filing, or editing issues; checking project and cycle status; or scoping work to a team.
+Use linear-axi whenever a task touches Linear: triaging, filing, or editing issues; checking what is assigned to you; or scoping work to a team.
 
 ## Workflow
 
-1. Run \`npx -y linear-axi\` with no arguments for a dashboard of the current workspace state and suggested next commands.
-2. Run \`npx -y linear-axi setup hooks\` to install SessionStart hooks that surface ambient Linear context at the start of each agent session.
-3. Every response ends with contextual next-step hints under \`help:\` - follow them.
+1. Run \`npx -y linear-axi\` with no arguments for a dashboard of your assigned issues, teams, and suggested next commands.
+2. Run \`npx -y linear-axi issue list\` to see open issues, then \`npx -y linear-axi issue view <ID>\` (e.g. ENG-123) for one issue's details.
+3. File and edit work with \`issue create\`, \`issue update\`, \`issue comment\`, \`issue close\`, and \`issue reopen\`; use \`npx -y linear-axi api '<graphql>'\` for anything the commands do not cover.
+4. Run \`npx -y linear-axi setup hooks\` to install SessionStart hooks that surface ambient Linear context at the start of each agent session.
+5. Every response ends with contextual next-step hints under \`help:\` - follow them.
 
 ## Commands
 
