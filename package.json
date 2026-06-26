@@ -1,0 +1,60 @@
+{
+  "name": "linear-axi",
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.33.2",
+  "description": "AXI-compliant Linear CLI for agents — token-efficient TOON output, contextual suggestions, structured errors",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mguilarducci/linear-axi.git"
+  },
+  "keywords": [
+    "linear",
+    "cli",
+    "agent",
+    "axi",
+    "toon"
+  ],
+  "bin": {
+    "linear-axi": "./dist/bin/linear-axi.js"
+  },
+  "files": [
+    "dist",
+    "skills/linear-axi",
+    "LICENSE",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:skill": "tsx scripts/build-skill.ts",
+    "dev": "tsx bin/linear-axi.ts",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@toon-format/toon": "^2.3.0",
+    "axi-sdk-js": "^0.1.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.0.0",
+    "eslint": "^10.1.0",
+    "globals": "^17.4.0",
+    "prettier": "^3.8.1",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.58.0",
+    "vitest": "^3.0.0"
+  }
+}
