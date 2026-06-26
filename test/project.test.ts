@@ -30,6 +30,25 @@ describe("project list", () => {
     const out = await projectCommand(["list"], TEST_CTX);
     expect(out).toMatch(/projects: 0/);
   });
+
+  it("passes a validated --limit through to the query", async () => {
+    const fetchMock = stubGraphQL({
+      projects: { nodes: [], pageInfo: { hasNextPage: false } },
+    });
+    await projectCommand(["list", "--limit", "5"], TEST_CTX);
+    const first = JSON.parse(
+      (fetchMock.mock.calls[0][1] as RequestInit).body as string,
+    ).variables.first;
+    expect(first).toBe(5);
+  });
+
+  it("rejects a non-positive --limit before any request", async () => {
+    const fetchMock = stubGraphQL({});
+    await expect(
+      projectCommand(["list", "--limit", "0"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("resolveProject", () => {
@@ -118,6 +137,16 @@ describe("project create", () => {
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("throws when projectCreate reports failure", async () => {
+    stubGraphQL(
+      { teams: { nodes: [TEAM_NODE] } },
+      { projectCreate: { success: false, project: null } },
+    );
+    await expect(
+      projectCommand(["create", "--name", "Launch", "--team", "ENG"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "UNKNOWN" });
+  });
 });
 
 describe("project update", () => {
@@ -149,5 +178,40 @@ describe("project update", () => {
       projectCommand(["update", "Launch"], TEST_CTX),
     ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("resolves the positional name even when flags precede it", async () => {
+    const fetchMock = stubGraphQL(
+      { projects: { nodes: [{ id: "p1", name: "Launch" }] } },
+      {
+        projectUpdate: {
+          success: true,
+          project: {
+            name: "New",
+            url: "https://linear.app/x/project/launch",
+            state: "paused",
+            health: "atRisk",
+          },
+        },
+      },
+    );
+    await projectCommand(
+      ["update", "--name", "New", "Launch"],
+      TEST_CTX,
+    );
+    const input = JSON.parse(
+      (fetchMock.mock.calls[1][1] as RequestInit).body as string,
+    ).variables.input;
+    expect(input.name).toBe("New");
+  });
+
+  it("throws when projectUpdate reports failure", async () => {
+    stubGraphQL(
+      { projects: { nodes: [{ id: "p1", name: "Launch" }] } },
+      { projectUpdate: { success: false, project: null } },
+    );
+    await expect(
+      projectCommand(["update", "Launch", "--state", "paused"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "UNKNOWN" });
   });
 });

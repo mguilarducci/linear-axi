@@ -9,6 +9,7 @@ import {
   pluck,
   custom,
   mapEnum,
+  percentField,
   renderDetail,
   renderList,
   renderHelp,
@@ -63,10 +64,9 @@ interface ProjectRef {
   name: string;
 }
 
-/** Percent label for a 0–1 progress float. */
-const progressField = custom("progress", (it) =>
-  typeof it.progress === "number" ? `${Math.round(it.progress * 100)}%` : "0%",
-);
+const progressField = percentField("progress");
+
+const DEFAULT_LIMIT = 50;
 
 /** Resolve a project by exact id or case-insensitive name. */
 export async function resolveProject(
@@ -114,15 +114,22 @@ export async function projectCommand(
 }
 
 async function listProjects(
-  _args: string[],
+  args: string[],
   ctx?: LinearContext,
 ): Promise<string> {
+  const limitRaw = takeFlag(args, "--limit");
+  const limit = limitRaw === undefined ? DEFAULT_LIMIT : Number(limitRaw);
+  if (!Number.isInteger(limit) || limit <= 0) {
+    throw new AxiError(`Invalid --limit "${limitRaw}"`, "VALIDATION_ERROR", [
+      "--limit must be a positive integer",
+    ]);
+  }
   const data = await linearRequest<{
     projects: {
       nodes: Array<Record<string, unknown>>;
       pageInfo: { hasNextPage: boolean };
     };
-  }>(PROJECT_LIST_QUERY, { first: 50 }, ctx);
+  }>(PROJECT_LIST_QUERY, { first: limit }, ctx);
   const projects = data.projects.nodes;
 
   return renderOutput([
@@ -238,6 +245,9 @@ async function createProject(
   const data = await linearRequest<{
     projectCreate: { success: boolean; project: Record<string, unknown> };
   }>(PROJECT_CREATE_MUTATION, { input }, ctx);
+  if (!data.projectCreate.success) {
+    throw new AxiError("Failed to create project", "UNKNOWN");
+  }
 
   return renderOutput([
     renderDetail("project", data.projectCreate.project, [
@@ -253,13 +263,6 @@ async function updateProject(
   args: string[],
   ctx?: LinearContext,
 ): Promise<string> {
-  const query = getPositional(args, 1);
-  if (!query) {
-    throw new AxiError(
-      "project update requires a name or id",
-      "VALIDATION_ERROR",
-    );
-  }
   const name = takeFlag(args, "--name");
   const state = takeFlag(args, "--state");
   const targetDate = takeFlag(args, "--target-date");
@@ -267,6 +270,13 @@ async function updateProject(
     inlineFlags: ["--description"],
     fileFlags: ["--description-file"],
   });
+  const query = getPositional(args, 1);
+  if (!query) {
+    throw new AxiError(
+      "project update requires a name or id",
+      "VALIDATION_ERROR",
+    );
+  }
 
   const input: Record<string, unknown> = {};
   if (name !== undefined) input.name = name;
@@ -284,6 +294,9 @@ async function updateProject(
   const data = await linearRequest<{
     projectUpdate: { success: boolean; project: Record<string, unknown> };
   }>(PROJECT_UPDATE_MUTATION, { id: ref.id, input }, ctx);
+  if (!data.projectUpdate.success) {
+    throw new AxiError("Failed to update project", "UNKNOWN");
+  }
 
   return renderOutput([
     renderDetail("project", data.projectUpdate.project, mutatedProjectSchema),

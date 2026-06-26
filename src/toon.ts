@@ -64,6 +64,13 @@ export function custom(as: string, fn: (item: any) => any): FieldDef {
   return { type: "custom", as, fn };
 }
 
+/** Percent label (e.g. "50%") for a 0–1 progress float; "0%" when absent. */
+export function percentField(key: string, as?: string): FieldDef {
+  return custom(as ?? key, (it) =>
+    typeof it[key] === "number" ? `${Math.round(it[key] * 100)}%` : "0%",
+  );
+}
+
 export function extract(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- items are JSON-parsed objects with dynamic keys
   item: Record<string, any>,

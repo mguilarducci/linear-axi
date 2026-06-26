@@ -1,9 +1,11 @@
+import { AxiError } from "axi-sdk-js";
 import type { LinearContext } from "../context.js";
 import { linearRequest } from "../linear.js";
 import { takeFlag } from "../args.js";
 import {
   field,
   custom,
+  percentField,
   renderDetail,
   renderList,
   renderHelp,
@@ -46,9 +48,7 @@ query TeamActiveCycle($id: String!) {
 const nameField = custom("name", (it) =>
   it.name ? it.name : `Cycle ${it.number}`,
 );
-const progressField = custom("progress", (it) =>
-  typeof it.progress === "number" ? `${Math.round(it.progress * 100)}%` : "0%",
-);
+const progressField = percentField("progress");
 
 export async function cycleCommand(
   args: string[],
@@ -56,8 +56,13 @@ export async function cycleCommand(
 ): Promise<string> {
   const first = args[0];
   const sub = first === undefined || first.startsWith("-") ? "list" : first;
-  const team = await resolveTeamId(ctx, takeFlag(args, "--team"));
+  if (sub !== "list" && sub !== "view") {
+    throw new AxiError(`Unknown cycle subcommand: ${sub}`, "VALIDATION_ERROR", [
+      "Run `linear-axi cycle --help` for usage",
+    ]);
+  }
 
+  const team = await resolveTeamId(ctx, takeFlag(args, "--team"));
   if (sub === "view") return viewActiveCycle(team.id, team.key, ctx);
   return listCycles(team.id, ctx);
 }

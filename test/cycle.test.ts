@@ -46,3 +46,13 @@ describe("cycle view", () => {
     expect(out).toMatch(/no active cycle/i);
   });
 });
+
+describe("cycle subcommands", () => {
+  it("rejects an unknown subcommand instead of silently listing", async () => {
+    const fetchMock = stubGraphQL({});
+    await expect(
+      cycleCommand(["veiw", "--team", "ENG"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
