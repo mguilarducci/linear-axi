@@ -64,6 +64,7 @@ async function listDocuments(ctx?: LinearContext): Promise<string> {
   return renderOutput([
     docs.length
       ? renderList("documents", docs, [
+          field("id"),
           field("title"),
           pluck("project", "name", "project"),
           relativeTime("updatedAt", "updated"),
@@ -93,8 +94,13 @@ async function viewDocument(
       content: string | null;
       url: string;
       project: { name: string } | null;
-    };
+    } | null;
   }>(DOCUMENT_DETAIL_QUERY, { id }, ctx);
+  if (!data.document) {
+    throw new AxiError(`No document matching "${id}"`, "NOT_FOUND", [
+      "Run `linear-axi document list` to see documents",
+    ]);
+  }
 
   return renderDetail("document", data.document, [
     field("title"),

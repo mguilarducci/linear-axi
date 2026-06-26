@@ -20,6 +20,7 @@ describe("document list", () => {
       },
     });
     const out = await documentCommand(["list"], TEST_CTX);
+    expect(out).toMatch(/d1/);
     expect(out).toMatch(/Spec/);
     expect(out).toMatch(/Launch/);
     expect(out).toMatch(/count: 1/);
@@ -59,5 +60,12 @@ describe("document view", () => {
     await expect(documentCommand(["view"], TEST_CTX)).rejects.toMatchObject({
       code: "VALIDATION_ERROR",
     });
+  });
+
+  it("throws NOT_FOUND for a nonexistent id", async () => {
+    stubGraphQL({ document: null });
+    await expect(
+      documentCommand(["view", "missing"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
   });
 });
