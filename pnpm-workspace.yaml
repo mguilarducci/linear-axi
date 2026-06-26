@@ -1,0 +1,11 @@
+packages:
+  - "."
+
+minimumReleaseAge: 10080
+minimumReleaseAgeStrict: true
+minimumReleaseAgeExclude:
+  - axi-sdk-js
+  - linear-axi
+
+onlyBuiltDependencies:
+  - esbuild
