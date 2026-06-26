@@ -8,6 +8,9 @@ import { setupCommand, SETUP_HELP } from "./commands/setup.js";
 import { meCommand, ME_HELP } from "./commands/me.js";
 import { teamCommand, TEAM_HELP } from "./commands/team.js";
 import { issueCommand, ISSUE_HELP } from "./commands/issue.js";
+import { projectCommand, PROJECT_HELP } from "./commands/project.js";
+import { cycleCommand, CYCLE_HELP } from "./commands/cycle.js";
+import { milestoneCommand, MILESTONE_HELP } from "./commands/milestone.js";
 import { apiCommand, API_HELP } from "./commands/api.js";
 
 export const DESCRIPTION =
@@ -23,14 +26,15 @@ type MainOptions = {
 };
 
 export const TOP_HELP = `usage: linear-axi [command] [args] [flags]
-commands[6]:
-  (none)=dashboard, me, team, issue, api, setup
+commands[9]:
+  (none)=dashboard, me, team, issue, project, cycle, milestone, api, setup
 flags[2]:
   --help, -v/-V/--version
 examples:
   linear-axi
   linear-axi issue list
   linear-axi issue view ENG-123
+  linear-axi project list
   linear-axi setup hooks
 `;
 
@@ -38,6 +42,9 @@ const COMMANDS: Record<string, AxiCliCommand<LinearContext>> = {
   me: meCommand,
   team: teamCommand,
   issue: issueCommand,
+  project: projectCommand,
+  cycle: cycleCommand,
+  milestone: milestoneCommand,
   api: apiCommand,
   setup: (args) => setupCommand(args),
 };
@@ -46,6 +53,9 @@ const COMMAND_HELP: Record<string, string> = {
   me: ME_HELP,
   team: TEAM_HELP,
   issue: ISSUE_HELP,
+  project: PROJECT_HELP,
+  cycle: CYCLE_HELP,
+  milestone: MILESTONE_HELP,
   api: API_HELP,
   setup: SETUP_HELP,
 };
