@@ -88,9 +88,19 @@ export async function teamCommand(
   args: string[],
   ctx?: LinearContext,
 ): Promise<string> {
-  const sub = getPositional(args, 0);
-  if (sub === "view") return viewTeam(args, ctx);
-  return listTeams(ctx);
+  const first = args[0];
+  const sub = first === undefined || first.startsWith("-") ? undefined : first;
+  switch (sub) {
+    case "view":
+      return viewTeam(args, ctx);
+    case "list":
+    case undefined:
+      return listTeams(ctx);
+    default:
+      throw new AxiError(`Unknown team subcommand: ${sub}`, "VALIDATION_ERROR", [
+        "Run `linear-axi team --help` for usage",
+      ]);
+  }
 }
 
 async function listTeams(ctx?: LinearContext): Promise<string> {

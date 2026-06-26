@@ -87,4 +87,16 @@ describe("team command", () => {
       AxiError,
     );
   });
+
+  it("throws VALIDATION_ERROR on an unknown subcommand", async () => {
+    await expect(teamCommand(["veiw", "ENG"], TEST_CTX)).rejects.toMatchObject({
+      code: "VALIDATION_ERROR",
+    });
+  });
+
+  it("defaults to list when a flag leads instead of a subcommand", async () => {
+    stubGraphQL(TEAMS({ id: "t-eng", key: "ENG", name: "Engineering" }));
+    const out = await teamCommand(["--foo"], TEST_CTX);
+    expect(out).toMatch(/count: 1/);
+  });
 });
