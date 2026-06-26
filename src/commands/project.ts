@@ -1,8 +1,9 @@
 import { AxiError } from "axi-sdk-js";
 import type { LinearContext } from "../context.js";
 import { linearRequest } from "../linear.js";
-import { getPositional } from "../args.js";
-import { truncateBody } from "../body.js";
+import { getPositional, takeFlag } from "../args.js";
+import { truncateBody, takeBody } from "../body.js";
+import { resolveTeamId } from "./team.js";
 import {
   field,
   pluck,
@@ -97,6 +98,10 @@ export async function projectCommand(
   switch (sub) {
     case "view":
       return viewProject(args, ctx);
+    case "create":
+      return createProject(args, ctx);
+    case "update":
+      return updateProject(args, ctx);
     case "list":
       return listProjects(args, ctx);
     default:
@@ -184,5 +189,103 @@ async function viewProject(
           field("targetDate", "target"),
         ])
       : "milestones: 0",
+  ]);
+}
+
+const PROJECT_CREATE_MUTATION = `
+mutation ProjectCreate($input: ProjectCreateInput!) {
+  projectCreate(input: $input) {
+    success
+    project { name url state }
+  }
+}`;
+
+const PROJECT_UPDATE_MUTATION = `
+mutation ProjectUpdate($id: String!, $input: ProjectUpdateInput!) {
+  projectUpdate(id: $id, input: $input) {
+    success
+    project { name url state health }
+  }
+}`;
+
+const mutatedProjectSchema = [
+  field("name"),
+  field("state"),
+  mapEnum("health", HEALTH_MAP, "unknown"),
+  field("url"),
+];
+
+async function createProject(
+  args: string[],
+  ctx?: LinearContext,
+): Promise<string> {
+  const name = takeFlag(args, "--name");
+  const description = takeBody(args, {
+    inlineFlags: ["--description"],
+    fileFlags: ["--description-file"],
+  });
+  const teamFlag = takeFlag(args, "--team");
+  if (!name) {
+    throw new AxiError("project create requires --name", "VALIDATION_ERROR", [
+      'Run `linear-axi project create --name "..." --team <KEY>`',
+    ]);
+  }
+
+  const team = await resolveTeamId(ctx, teamFlag);
+  const input: Record<string, unknown> = { name, teamIds: [team.id] };
+  if (description !== undefined) input.description = description;
+
+  const data = await linearRequest<{
+    projectCreate: { success: boolean; project: Record<string, unknown> };
+  }>(PROJECT_CREATE_MUTATION, { input }, ctx);
+
+  return renderOutput([
+    renderDetail("project", data.projectCreate.project, [
+      field("name"),
+      field("state"),
+      field("url"),
+    ]),
+    renderHelp(["Run `linear-axi project view <NAME>` to see the new project"]),
+  ]);
+}
+
+async function updateProject(
+  args: string[],
+  ctx?: LinearContext,
+): Promise<string> {
+  const query = getPositional(args, 1);
+  if (!query) {
+    throw new AxiError(
+      "project update requires a name or id",
+      "VALIDATION_ERROR",
+    );
+  }
+  const name = takeFlag(args, "--name");
+  const state = takeFlag(args, "--state");
+  const targetDate = takeFlag(args, "--target-date");
+  const description = takeBody(args, {
+    inlineFlags: ["--description"],
+    fileFlags: ["--description-file"],
+  });
+
+  const input: Record<string, unknown> = {};
+  if (name !== undefined) input.name = name;
+  if (state !== undefined) input.state = state;
+  if (targetDate !== undefined) input.targetDate = targetDate;
+  if (description !== undefined) input.description = description;
+
+  if (Object.keys(input).length === 0) {
+    throw new AxiError("Nothing to update", "VALIDATION_ERROR", [
+      "Pass at least one of --name, --state, --description, --target-date",
+    ]);
+  }
+
+  const ref = await resolveProject(ctx, query);
+  const data = await linearRequest<{
+    projectUpdate: { success: boolean; project: Record<string, unknown> };
+  }>(PROJECT_UPDATE_MUTATION, { id: ref.id, input }, ctx);
+
+  return renderOutput([
+    renderDetail("project", data.projectUpdate.project, mutatedProjectSchema),
   ]);
 }

@@ -81,3 +81,73 @@ describe("project view", () => {
     });
   });
 });
+
+const TEAM_NODE = { id: "t-eng", key: "ENG", name: "Engineering" };
+
+describe("project create", () => {
+  it("resolves the team and creates the project", async () => {
+    const fetchMock = stubGraphQL(
+      { teams: { nodes: [TEAM_NODE] } },
+      {
+        projectCreate: {
+          success: true,
+          project: {
+            name: "Launch",
+            url: "https://linear.app/x/project/launch",
+            state: "planned",
+          },
+        },
+      },
+    );
+    const out = await projectCommand(
+      ["create", "--name", "Launch", "--team", "ENG"],
+      TEST_CTX,
+    );
+    expect(out).toMatch(/Launch/);
+    const input = JSON.parse(
+      (fetchMock.mock.calls[1][1] as RequestInit).body as string,
+    ).variables.input;
+    expect(input.name).toBe("Launch");
+    expect(input.teamIds).toEqual(["t-eng"]);
+  });
+
+  it("requires --name before any request", async () => {
+    const fetchMock = stubGraphQL({ teams: { nodes: [TEAM_NODE] } });
+    await expect(
+      projectCommand(["create", "--team", "ENG"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("project update", () => {
+  it("updates the state of a resolved project", async () => {
+    const fetchMock = stubGraphQL(
+      { projects: { nodes: [{ id: "p1", name: "Launch" }] } },
+      {
+        projectUpdate: {
+          success: true,
+          project: {
+            name: "Launch",
+            url: "https://linear.app/x/project/launch",
+            state: "paused",
+            health: "atRisk",
+          },
+        },
+      },
+    );
+    await projectCommand(["update", "Launch", "--state", "paused"], TEST_CTX);
+    const input = JSON.parse(
+      (fetchMock.mock.calls[1][1] as RequestInit).body as string,
+    ).variables.input;
+    expect(input.state).toBe("paused");
+  });
+
+  it("errors with nothing to update and makes no request", async () => {
+    const fetchMock = stubGraphQL({});
+    await expect(
+      projectCommand(["update", "Launch"], TEST_CTX),
+    ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
