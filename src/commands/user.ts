@@ -8,10 +8,12 @@ import {
   pluck,
   boolYesNo,
   renderDetail,
+  renderHelp,
   renderList,
   renderOutput,
 } from "../toon.js";
 import { formatCountLine } from "../format.js";
+import { getSuggestions } from "../suggestions.js";
 
 export const USER_HELP = `usage: linear-axi user <list|view> [args]
   list                       list workspace members
@@ -34,14 +36,18 @@ query Users {
   }
 }`;
 
-const USER_ISSUES_QUERY = `
-query UserIssues($id: String!, $filter: IssueFilter) {
+const USER_DETAIL_QUERY = `
+query UserDetail($id: String!, $filter: IssueFilter) {
   user(id: $id) {
+    id name displayName email active
     assignedIssues(first: 10, filter: $filter, orderBy: updatedAt) {
       nodes { identifier title state { name } }
     }
   }
 }`;
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function userCommand(
   args: string[],
@@ -65,6 +71,26 @@ async function fetchUsers(
   return { nodes: data.users.nodes, hasMore: data.users.pageInfo.hasNextPage };
 }
 
+async function resolveUserId(
+  query: string,
+  ctx?: LinearContext,
+): Promise<string> {
+  const { nodes: users } = await fetchUsers(ctx);
+  const q = query.toLowerCase();
+  const user = users.find(
+    (u) =>
+      u.email.toLowerCase() === q ||
+      u.displayName.toLowerCase() === q ||
+      u.name.toLowerCase() === q,
+  );
+  if (!user) {
+    throw new AxiError(`No user matching "${query}"`, "NOT_FOUND", [
+      "Run `linear-axi user list` to see workspace members",
+    ]);
+  }
+  return user.id;
+}
+
 async function listUsers(ctx?: LinearContext): Promise<string> {
   const { nodes: users, hasMore } = await fetchUsers(ctx);
   return renderOutput([
@@ -76,6 +102,13 @@ async function listUsers(ctx?: LinearContext): Promise<string> {
         ])
       : "users: 0 found",
     formatCountLine({ count: users.length, hasMore }),
+    renderHelp(
+      getSuggestions({
+        domain: "user",
+        action: "list",
+        isEmpty: users.length === 0,
+      }),
+    ),
   ]);
 }
 
@@ -87,33 +120,28 @@ async function viewUser(args: string[], ctx?: LinearContext): Promise<string> {
     ]);
   }
 
-  const { nodes: users } = await fetchUsers(ctx);
-  const q = query.toLowerCase();
-  const user = users.find(
-    (u) =>
-      u.id === query ||
-      u.email.toLowerCase() === q ||
-      u.displayName.toLowerCase() === q ||
-      u.name.toLowerCase() === q,
-  );
-  if (!user) {
+  const id = UUID_RE.test(query) ? query : await resolveUserId(query, ctx);
+
+  const data = await linearRequest<{
+    user:
+      | (User & {
+          assignedIssues: {
+            nodes: Array<{
+              identifier: string;
+              title: string;
+              state: { name: string };
+            }>;
+          };
+        })
+      | null;
+  }>(USER_DETAIL_QUERY, { id, filter: openIssueFilter() }, ctx);
+  if (!data.user) {
     throw new AxiError(`No user matching "${query}"`, "NOT_FOUND", [
       "Run `linear-axi user list` to see workspace members",
     ]);
   }
-
-  const data = await linearRequest<{
-    user: {
-      assignedIssues: {
-        nodes: Array<{
-          identifier: string;
-          title: string;
-          state: { name: string };
-        }>;
-      };
-    };
-  }>(USER_ISSUES_QUERY, { id: user.id, filter: openIssueFilter() }, ctx);
-  const issues = data.user.assignedIssues.nodes;
+  const user = data.user;
+  const issues = user.assignedIssues.nodes;
 
   return renderOutput([
     renderDetail("user", user, [

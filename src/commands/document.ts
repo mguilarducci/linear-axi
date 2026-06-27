@@ -9,10 +9,12 @@ import {
   custom,
   relativeTime,
   renderDetail,
+  renderHelp,
   renderList,
   renderOutput,
 } from "../toon.js";
 import { formatCountLine } from "../format.js";
+import { getSuggestions } from "../suggestions.js";
 
 export const DOCUMENT_HELP = `usage: linear-axi document <list|view> [args]
   list                       list documents (title, project, updated)
@@ -74,6 +76,13 @@ async function listDocuments(ctx?: LinearContext): Promise<string> {
       count: docs.length,
       hasMore: data.documents.pageInfo.hasNextPage,
     }),
+    renderHelp(
+      getSuggestions({
+        domain: "document",
+        action: "list",
+        isEmpty: docs.length === 0,
+      }),
+    ),
   ]);
 }
 

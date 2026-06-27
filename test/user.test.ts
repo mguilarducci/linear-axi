@@ -38,6 +38,7 @@ describe("user view", () => {
       { users: { nodes: [MAT], pageInfo: { hasNextPage: false } } },
       {
         user: {
+          ...MAT,
           assignedIssues: {
             nodes: [
               {
@@ -53,6 +54,16 @@ describe("user view", () => {
     const out = await userCommand(["view", "m@x.com"], TEST_CTX);
     expect(out).toMatch(/m@x\.com/);
     expect(out).toMatch(/ENG-1/);
+  });
+
+  it("resolves a user by raw id without scanning the member list", async () => {
+    const uuid = "11111111-1111-4111-8111-111111111111";
+    stubGraphQL({
+      user: { ...MAT, id: uuid, assignedIssues: { nodes: [] } },
+    });
+    const out = await userCommand(["view", uuid], TEST_CTX);
+    expect(out).toMatch(/m@x\.com/);
+    expect(out).toMatch(/assignedIssues: 0 open/);
   });
 
   it("throws NOT_FOUND for an unknown user", async () => {

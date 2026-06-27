@@ -6,10 +6,12 @@ import {
   field,
   custom,
   renderDetail,
+  renderHelp,
   renderList,
   renderOutput,
 } from "../toon.js";
 import { formatCountLine } from "../format.js";
+import { getSuggestions } from "../suggestions.js";
 import { resolveTeamId } from "./team.js";
 
 export const LABEL_HELP = `usage: linear-axi label <list|create> [flags]
@@ -104,6 +106,7 @@ async function listLabels(
       count: labels.length,
       hasMore: data.issueLabels.pageInfo.hasNextPage,
     }),
+    renderHelp(getSuggestions({ domain: "label", action: "list" })),
   ]);
 }
 
@@ -133,11 +136,14 @@ async function createLabel(
     (l) => l.name.toLowerCase() === name.toLowerCase(),
   );
   if (found) {
-    return renderDetail(
-      "label",
-      { name: found.name, message: "already exists (no-op)" },
-      [field("name"), field("message")],
-    );
+    return renderOutput([
+      renderDetail(
+        "label",
+        { name: found.name, message: "already exists (no-op)" },
+        [field("name"), field("message")],
+      ),
+      renderHelp(getSuggestions({ domain: "label", action: "create" })),
+    ]);
   }
 
   const input: Record<string, unknown> = { name };
@@ -151,8 +157,11 @@ async function createLabel(
     throw new AxiError("Failed to create label", "UNKNOWN");
   }
 
-  return renderDetail("label", data.issueLabelCreate.issueLabel, [
-    field("name"),
-    field("color"),
+  return renderOutput([
+    renderDetail("label", data.issueLabelCreate.issueLabel, [
+      field("name"),
+      field("color"),
+    ]),
+    renderHelp(getSuggestions({ domain: "label", action: "create" })),
   ]);
 }

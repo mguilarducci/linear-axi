@@ -7,10 +7,12 @@ import {
   field,
   custom,
   renderDetail,
+  renderHelp,
   renderList,
   renderOutput,
 } from "../toon.js";
 import { formatCountLine } from "../format.js";
+import { getSuggestions } from "../suggestions.js";
 
 export const INITIATIVE_HELP = `usage: linear-axi initiative <list|view> [args]
   list                       list initiatives (name, status)
@@ -78,6 +80,13 @@ async function listInitiatives(ctx?: LinearContext): Promise<string> {
       count: inits.length,
       hasMore: data.initiatives.pageInfo.hasNextPage,
     }),
+    renderHelp(
+      getSuggestions({
+        domain: "initiative",
+        action: "list",
+        isEmpty: inits.length === 0,
+      }),
+    ),
   ]);
 }
 
