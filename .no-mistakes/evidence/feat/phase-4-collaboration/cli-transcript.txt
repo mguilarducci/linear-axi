@@ -1,0 +1,153 @@
+# Phase 4 — Collaboration commands wired into linear-axi CLI
+
+Commit 7e595b6 wires the label, user, document, and initiative commands
+into the CLI and refreshes the skill. Below is the end-user terminal
+experience, captured two ways:
+
+  A. The REAL built binary (node dist/bin/linear-axi.js) for the wiring,
+     help, and auth-error surfaces that need no API key.
+  B. The REAL command pipeline (arg parsing -> dispatch -> linearRequest ->
+     TOON rendering) driven against a stubbed Linear GraphQL endpoint, so
+     the actual rendered list/view/create output is visible.
+
+========================================================================
+A. REAL BINARY — wiring & help surfaces (no API key)
+========================================================================
+
+$ linear-axi --help
+usage: linear-axi [command] [args] [flags]
+commands[13]:
+  (none)=dashboard, me, team, issue, project, cycle, milestone, label, user, document, initiative, api, setup
+flags[2]:
+  --help, -v/-V/--version
+examples:
+  linear-axi
+  linear-axi issue list
+  linear-axi issue view ENG-123
+  linear-axi project list
+  linear-axi setup hooks
+
+$ linear-axi label --help
+usage: linear-axi label <list|create> [flags]
+  list [--team <KEY>]               list labels (name, color, scope)
+  create --name "..." [flags]       create a label
+    --color <hex>                     label color, e.g. #ff8800
+    --team <KEY>                      team-scope the label (else workspace)
+$ linear-axi user --help
+usage: linear-axi user <list|view> [args]
+  list                       list workspace members
+  view <EMAIL|NAME|ID>       show a user and their open assigned issues
+$ linear-axi document --help
+usage: linear-axi document <list|view> [args]
+  list                       list documents (title, project, updated)
+  view <ID> [--full]         show a document's content
+$ linear-axi initiative --help
+usage: linear-axi initiative <list|view> [args]
+  list                       list initiatives (name, status)
+  view <NAME|ID> [--full]    show an initiative and its projects
+------------------------------------------------------------------------
+Dispatch reaches each new command (structured AUTH_REQUIRED, not
+'unknown command') — proving they are registered, not just defined:
+
+$ linear-axi label list
+error: LINEAR_API_KEY is not set
+code: AUTH_REQUIRED
+help[2]: "Set LINEAR_API_KEY to a Linear personal API key, then retry",Create one at Linear → Settings → Security & access → Personal API keys
+
+$ linear-axi initiative list
+error: LINEAR_API_KEY is not set
+code: AUTH_REQUIRED
+help[2]: "Set LINEAR_API_KEY to a Linear personal API key, then retry",Create one at Linear → Settings → Security & access → Personal API keys
+
+========================================================================
+B. REAL PIPELINE vs stubbed Linear API — rendered TOON output
+========================================================================
+
+$ linear-axi label list
+labels[3]{name,color,scope}:
+  bug,#eb5757,ENG
+  feature,#5e6ad2,workspace
+  p0,#ff8800,ENG
+count: 3
+help[1]:
+  Run `linear-axi label create --name "..."` to create a label
+
+$ linear-axi label list --team ENG   (team scoping)
+labels[2]{name,color,scope}:
+  bug,#eb5757,ENG
+  p0,#ff8800,ENG
+count: 2
+help[1]:
+  Run `linear-axi label create --name "..."` to create a label
+
+$ linear-axi label create --name bug --team ENG   (idempotent no-op)
+label:
+  name: bug
+  message: already exists (no-op)
+help[1]:
+  Run `linear-axi label list` to see all labels
+
+$ linear-axi label create --name shipped --color #22aa55   (creates)
+label:
+  name: shipped
+  color: #22aa55
+help[1]:
+  Run `linear-axi label list` to see all labels
+
+$ linear-axi user list
+users[3]{name,email,active}:
+  ada,ada@example.com,yes
+  alan,alan@example.com,yes
+  grace,grace@example.com,no
+count: 3
+help[1]:
+  Run `linear-axi user view <EMAIL|NAME>` to see a member and their open issues
+
+$ linear-axi user view ada@example.com
+user:
+  name: ada
+  email: ada@example.com
+  active: yes
+assignedIssues[2]{identifier,title,state}:
+  ENG-12,Fix flaky retry,In Progress
+  ENG-30,Add pagination,Todo
+
+$ linear-axi document list
+documents[2]{id,title,project,updated}:
+  doc-1,Onboarding Guide,Platform,1h ago
+  doc-2,Incident Runbook,null,2d ago
+count: 2
+help[1]:
+  Run `linear-axi document view <ID>` to read a document's content
+
+$ linear-axi document view doc-2   (body truncated at 800 chars)
+document:
+  title: Incident Runbook
+  project: null
+  url: "https://linear.app/acme/document/incident-runbook"
+  content: "# Incident Runbook\n\nStep: page on-call, open a war room, mitigate, then write the postmortem within 48h. Step: page on-call, open a war room, mitigate, then write the postmortem within 48h. Step: page on-call, open a war room, mitigate, then write the postmortem within 48h. Step: page on-call, open a war room, mitigate, then write the postmortem within 48h. Step: page on-call, open a war room, mitigate, then write the postmortem within 48h. Step: page on-call, open a war room, mitigate, then write the postmortem within 48h. Step: page on-call, open a war room, mitigate, then write the postmortem within 48h. Step: page on-call, open a war room, mitigate, then write the postmortem within 48h. Step: page on-call, open a war room, mitigate, then write the postmortem within 48h. Step: page on-c\n... (truncated, 1295 chars total — use --full to see the complete body)"
+
+$ linear-axi document view doc-2 --full   (full body, head)
+document:
+  title: Incident Runbook
+  project: null
+  url: "https://linear.app/acme/document/incident-runbook"
+  content: "# Incident Runbook\n\nStep: page on-call, open a war room, mitigate, then write the postmortem within 48h. Step: page on-call, open a war room, mitigate, then write the postmort ...
+
+$ linear-axi initiative list
+initiatives[2]{name,status}:
+  Q3 Reliability,Active
+  Developer Experience,Planned
+count: 2
+help[1]:
+  Run `linear-axi initiative view <NAME>` to see its projects
+
+$ linear-axi initiative view "Q3 Reliability"
+initiative:
+  name: Q3 Reliability
+  status: Active
+  target: 2026-09-30
+  description: Cut p95 latency and halve incident MTTR across the platform this quarter.
+projects[2]{name,state}:
+  Latency,started
+  Observability,planned
