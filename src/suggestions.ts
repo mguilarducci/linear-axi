@@ -60,6 +60,37 @@ const TABLE: SuggestionEntry[] = [
       "Run `linear-axi team view <KEY>` to see its states and labels",
     ],
   },
+  {
+    match: (c) =>
+      c.domain === "document" && c.action === "list" && c.isEmpty !== true,
+    lines: () => [
+      "Run `linear-axi document view <ID>` to read a document's content",
+    ],
+  },
+  {
+    match: (c) =>
+      c.domain === "user" && c.action === "list" && c.isEmpty !== true,
+    lines: () => [
+      "Run `linear-axi user view <EMAIL|NAME>` to see a member and their open issues",
+    ],
+  },
+  {
+    match: (c) => c.domain === "label" && c.action === "list",
+    lines: () => [
+      'Run `linear-axi label create --name "..."` to create a label',
+    ],
+  },
+  {
+    match: (c) => c.domain === "label" && c.action === "create",
+    lines: () => ["Run `linear-axi label list` to see all labels"],
+  },
+  {
+    match: (c) =>
+      c.domain === "initiative" && c.action === "list" && c.isEmpty !== true,
+    lines: () => [
+      "Run `linear-axi initiative view <NAME>` to see its projects",
+    ],
+  },
 ];
 
 export function getSuggestions(ctx: SuggestionContext): string[] {

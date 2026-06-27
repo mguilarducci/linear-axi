@@ -28,14 +28,15 @@ Use linear-axi whenever a task touches Linear: triaging, filing, or editing issu
 2. Run `npx -y linear-axi issue list` to see open issues, then `npx -y linear-axi issue view <ID>` (e.g. ENG-123) for one issue's details.
 3. File and edit work with `issue create`, `issue update`, `issue comment`, `issue close`, and `issue reopen`; use `npx -y linear-axi api '<graphql>'` for anything the commands do not cover.
 4. Track higher-level work with `project list`/`project view`, `cycle list`/`cycle view --team <KEY>`, and `milestone list --project <NAME>`.
-5. Run `npx -y linear-axi setup hooks` to install SessionStart hooks that surface ambient Linear context at the start of each agent session.
-6. Every response ends with contextual next-step hints under `help:` - follow them.
+5. Look up collaborators and references with `label list`/`label create`, `user list`/`user view <EMAIL>`, `document list`/`document view <ID>`, and `initiative list`/`initiative view <NAME>`.
+6. Run `npx -y linear-axi setup hooks` to install SessionStart hooks that surface ambient Linear context at the start of each agent session.
+7. Every response ends with contextual next-step hints under `help:` - follow them.
 
 ## Commands
 
 ```
-commands[9]:
-  (none)=dashboard, me, team, issue, project, cycle, milestone, api, setup
+commands[13]:
+  (none)=dashboard, me, team, issue, project, cycle, milestone, label, user, document, initiative, api, setup
 ```
 
 Run `npx -y linear-axi --help` for global flags, or `npx -y linear-axi <command> --help` for per-command usage.

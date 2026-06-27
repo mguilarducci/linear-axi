@@ -44,6 +44,36 @@ describe("getSuggestions", () => {
     expect(lines.join("\n")).toMatch(/team view/);
   });
 
+  it("suggests view/create follow-ups for the collaboration domains", () => {
+    expect(
+      getSuggestions({ domain: "document", action: "list" }).join("\n"),
+    ).toMatch(/document view/);
+    expect(
+      getSuggestions({ domain: "user", action: "list" }).join("\n"),
+    ).toMatch(/user view/);
+    expect(
+      getSuggestions({ domain: "label", action: "list" }).join("\n"),
+    ).toMatch(/label create/);
+    expect(
+      getSuggestions({ domain: "label", action: "create" }).join("\n"),
+    ).toMatch(/label list/);
+    expect(
+      getSuggestions({ domain: "initiative", action: "list" }).join("\n"),
+    ).toMatch(/initiative view/);
+  });
+
+  it("stays silent on empty document/user/initiative lists", () => {
+    expect(
+      getSuggestions({ domain: "document", action: "list", isEmpty: true }),
+    ).toEqual([]);
+    expect(
+      getSuggestions({ domain: "user", action: "list", isEmpty: true }),
+    ).toEqual([]);
+    expect(
+      getSuggestions({ domain: "initiative", action: "list", isEmpty: true }),
+    ).toEqual([]);
+  });
+
   it("returns no suggestions for an unrecognized context", () => {
     expect(getSuggestions({ domain: "nope", action: "nope" })).toEqual([]);
   });

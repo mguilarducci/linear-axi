@@ -11,6 +11,10 @@ import { issueCommand, ISSUE_HELP } from "./commands/issue.js";
 import { projectCommand, PROJECT_HELP } from "./commands/project.js";
 import { cycleCommand, CYCLE_HELP } from "./commands/cycle.js";
 import { milestoneCommand, MILESTONE_HELP } from "./commands/milestone.js";
+import { labelCommand, LABEL_HELP } from "./commands/label.js";
+import { userCommand, USER_HELP } from "./commands/user.js";
+import { documentCommand, DOCUMENT_HELP } from "./commands/document.js";
+import { initiativeCommand, INITIATIVE_HELP } from "./commands/initiative.js";
 import { apiCommand, API_HELP } from "./commands/api.js";
 
 export const DESCRIPTION =
@@ -26,8 +30,8 @@ type MainOptions = {
 };
 
 export const TOP_HELP = `usage: linear-axi [command] [args] [flags]
-commands[9]:
-  (none)=dashboard, me, team, issue, project, cycle, milestone, api, setup
+commands[13]:
+  (none)=dashboard, me, team, issue, project, cycle, milestone, label, user, document, initiative, api, setup
 flags[2]:
   --help, -v/-V/--version
 examples:
@@ -45,6 +49,10 @@ const COMMANDS: Record<string, AxiCliCommand<LinearContext>> = {
   project: projectCommand,
   cycle: cycleCommand,
   milestone: milestoneCommand,
+  label: labelCommand,
+  user: userCommand,
+  document: documentCommand,
+  initiative: initiativeCommand,
   api: apiCommand,
   setup: (args) => setupCommand(args),
 };
@@ -56,6 +64,10 @@ const COMMAND_HELP: Record<string, string> = {
   project: PROJECT_HELP,
   cycle: CYCLE_HELP,
   milestone: MILESTONE_HELP,
+  label: LABEL_HELP,
+  user: USER_HELP,
+  document: DOCUMENT_HELP,
+  initiative: INITIATIVE_HELP,
   api: API_HELP,
   setup: SETUP_HELP,
 };

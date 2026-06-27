@@ -11,7 +11,7 @@ Linear CLI for agents — designed with [AXI](https://github.com/kunchenguid/axi
 Talks to Linear with token-efficient [TOON](https://toonformat.dev/) output, contextual next-step suggestions, and structured error handling.
 Built for autonomous agents that interact with Linear via shell execution.
 
-> **Status: in progress.** This repository ships the AXI plumbing — the SKILL.md generation pipeline and CI — alongside a live no-arg dashboard and the core Linear commands: `issue` (list/view/create/update/comment/close/reopen), `me`, `team`, the planning surface — `project` (list/view/create/update), `cycle` (list/view), and `milestone` (list) — and a raw `api` escape hatch, plus `setup hooks`.
+> **Status: in progress.** This repository ships the AXI plumbing — the SKILL.md generation pipeline and CI — alongside a live no-arg dashboard and the core Linear commands: `issue` (list/view/create/update/comment/close/reopen), `me`, `team`, the planning surface — `project` (list/view/create/update), `cycle` (list/view), and `milestone` (list) — the collaboration surface — `label` (list/create), `user` (list/view), `document` (list/view), and `initiative` (list/view) — and a raw `api` escape hatch, plus `setup hooks`.
 
 ## Quick Start
 
@@ -70,6 +70,14 @@ linear-axi project update "Roadmap" --state completed  # edit name, state, descr
 linear-axi cycle list --team ENG    # list a team's cycles (--team, else LINEAR_TEAM)
 linear-axi cycle view --team ENG    # show the team's active cycle
 linear-axi milestone list --project "Roadmap"  # list a project's milestones
+linear-axi label list               # list labels (--team to scope to a team)
+linear-axi label create --name "..."  # create a label (--color <hex>, --team to team-scope)
+linear-axi user list                # list workspace members
+linear-axi user view me@co.com      # show a user and their open issues (EMAIL|NAME|ID)
+linear-axi document list            # list documents (title, project, updated)
+linear-axi document view <ID>       # read a document (add --full for the complete body)
+linear-axi initiative list          # list initiatives (name, status)
+linear-axi initiative view "Q3"     # show an initiative and its projects (add --full)
 linear-axi api '{ viewer { id } }'  # raw GraphQL escape hatch (--var key=value)
 linear-axi setup hooks              # install optional agent session hooks
 ```
